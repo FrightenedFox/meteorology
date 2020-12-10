@@ -1,10 +1,22 @@
-import assistant as assist
+def read_file(path):
+	''' This function reads the given file line by line and returns an MxN matrix,
+	where M - the number of lines and N - the number of columns in the file'''
+	with open(path, mode='r') as file:
+		data_matrix= []
+		for line in file:
+			data_row = []
+			for record in line.split():
+				data_row.append(float(record))
+			data_matrix.append(data_row)
+	return data_matrix
+
+
 class Database(object):
 	"""docstring for Database"""
 	def __init__(self, source_file):
 		super(Database, self).__init__()
 		self.source_file = source_file
-		self.mHours = assist.read_file(source_file)
+		self.mHours = read_file(source_file)
 		self.season_dict = { 0:0, 1:0, 2:1, 3:1, 4:1, 5:2, 6:2, 7:2, 8:3, 9:3, 10:3, 11:0}
 		self.distribute_data(self.mHours)
 
@@ -54,6 +66,7 @@ class Database(object):
 				mSeasons[self.season_dict[month_number]].append(record)
 
 		self.mDays, self.mWeeks, self.mMonths, self.mSeasons = mDays, mWeeks, mMonths, mSeasons
+
 
 
 # o = Database('.\\Data\\bialystok.txt')
