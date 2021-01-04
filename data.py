@@ -1,75 +1,50 @@
-def read_file(path):
-	''' This function reads the given file line by line and returns an MxN matrix,
-	where M - the number of lines and N - the number of columns in the file'''
-	with open(path, mode='r') as file:
-		data_matrix= []
-		for line in file:
-			data_row = []
-			for record in line.split():
-				data_row.append(float(record))
-			data_matrix.append(data_row)
-	return data_matrix
+import pandas as pd, numpy as np
+
+class Data():
+	names = ['M', 'D', 'H', 'DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY', 'N_0', 
+		'N_30', 'NE_30', 'E_30', 'SE_30', 'S_30', 'SW_30', 'W_30', 'NW_30',
+		'N_45', 'NE_45', 'E_45', 'SE_45', 'S_45', 'SW_45', 'W_45', 'NW_45',
+		'N_60', 'NE_60', 'E_60', 'SE_60', 'S_60', 'SW_60', 'W_60', 'NW_60',
+		'N_90', 'NE_90', 'E_90', 'SE_90', 'S_90', 'SW_90', 'W_90', 'NW_90']
+
+	def __init__(self, path):
+		self.dFrame = pd.read_table(path,
+			delimiter = ' ', names = self.names, skipinitialspace = True, index_col = 0)
+
+	def day(self, number):
+		n = 24
+		tail, head = n*(number-1), n*number
+		return self.dFrame.iloc[tail:head]
+
+	def week(self, number):
+		n = 168 	# 24 * 7 = 168
+		tail, head = n*(number-1), n*number
+		return self.dFrame.iloc[tail:head]
+
+	def month(self, number):
+		return self.dFrame[ self.dFrame['M'] == number ]
+
+	def season(self, number):
+		if type(number)==str:
+			number = number.lower()
+		season_dict = { 'winter':[12, 1, 2], 1:[12, 1, 2],
+						'spring':[ 3, 4, 5], 2:[ 3, 4, 5],
+						'summer':[ 6, 7, 8], 3:[ 6, 7, 8],
+						'autumn':[ 9,10,11], 4:[ 9,10,11]}
+		a, b, c = season_dict[number][0], season_dict[number][1], season_dict[number][2]
+		key = np.logical_or(np.logical_or(self.dFrame['M'] == a,self.dFrame['M'] == b),self.dFrame['M'] == c)
+		return self.dFrame[key]
 
 
-class Database(object):
-	"""docstring for Database"""
-	def __init__(self, source_file):
-		super(Database, self).__init__()
-		self.source_file = source_file
-		self.mHours = read_file(source_file)
-		self.season_dict = { 0:0, 1:0, 2:1, 3:1, 4:1, 5:2, 6:2, 7:2, 8:3, 9:3, 10:3, 11:0}
-		self.distribute_data(self.mHours)
+def program_prototype(d_type, t_interval):
+	
+	pass
 
+path = '.\\Data\\bialystok.txt'
 
-	def distribute_data(self, data, day_index=2, month_index=1):
-
-		mDays, mWeeks, mMonths, mSeasons = [],[],[],[[] for i in range(4)]
-		week_number, hour_in_week = -1, 168
-		day_number, month_number = -1, -1
-		previous_day, previous_month = None, None
-		december_counter = 0
-
-		for record in data:
-
-			if record[day_index] == previous_day:
-				mDays[day_number].append(record)
-			else:
-				previous_day = record[day_index]
-				day_number += 1
-				mDays.append([])
-				mDays[day_number].append(record)
-
-
-			if hour_in_week < 168:
-				mWeeks[week_number].append(record)
-				hour_in_week += 1
-			else:
-				hour_in_week = 1
-				week_number += 1
-				mWeeks.append([])
-				mWeeks[week_number].append(record)
-
-
-			if record[month_index] == previous_month:
-				mMonths[month_number].append(record)
-			else:
-				previous_month = record[month_index]
-				month_number +=1
-				mMonths.append([])
-				mMonths[month_number].append(record)
-
-
-			if month_number == 11:
-				mSeasons[0].insert(december_counter, record)
-				december_counter += 1
-			else:
-				mSeasons[self.season_dict[month_number]].append(record)
-
-		self.mDays, self.mWeeks, self.mMonths, self.mSeasons = mDays, mWeeks, mMonths, mSeasons
-
-
-
-# o = Database('.\\Data\\bialystok.txt')
-# for i in range(0, 4):
-# 	for j in range(0, 24, 6):
-# 		print(o.mSeasons[i][j][:4])
+bialystok = Data(path)
+# print(bialystok.dFrame)
+# print(bialystok.week(10))
+# print(bialystok.month(10))
+# print(bialystok.day(32))
+print(bialystok.season(4))
