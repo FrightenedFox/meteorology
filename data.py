@@ -2,7 +2,7 @@ import pandas as pd, numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.graphics.tsaplots import plot_acf
 
-class Data():
+class WeatherData():
 	names = ['M', 'D', 'H', 
 		'DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY', 'N_0', 
 		'N_30', 'NE_30', 'E_30', 'SE_30', 'S_30', 'SW_30', 'W_30', 'NW_30',
@@ -14,6 +14,7 @@ class Data():
 		self.dFrame = pd.read_table(path,
 			delimiter = ' ', names = self.names, skipinitialspace = True, index_col = 0)
 		self.dFrame.insert(loc = 0, column ='Y', value = year)
+		self.dFrame.loc[self.dFrame['M']==12, "Y"] = year-1
 		date = self.dFrame[['Y','M','D','H']].rename(columns={'Y': 'year', 'M':'month', 'D':'day','H':'hour'})
 		self.dFrame.insert(loc = 0, column ='Date', value = pd.to_datetime(date))
 		self.dFrame.set_index('Date', drop = True, inplace=True)
@@ -75,9 +76,3 @@ class Data():
 		plot_acf(self.dFrame[x], lags = max_lag-1)
 		plt.show()
 		plt.close()
-
-
-path = '.\\Data\\bialystok.txt'
-bialystok = Data(path)
-bialystok.autocorr('RH')
-bialystok.corr('RH', 'DBT')
