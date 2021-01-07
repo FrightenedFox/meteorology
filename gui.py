@@ -4,6 +4,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 from matplotlib import style
 from matplotlib import pyplot as plt
+matplotlib.use("TkAgg")
+style.use("ggplot")
 
 import tkinter as tk
 from tkinter import ttk
@@ -13,19 +15,17 @@ import numpy as np
 
 import data as dt
 
-data_types = ['DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY']
+CategoriesList = ['DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY']
 
-vector_types = {'all' 	: 'All',
-				'day' 	: 'Day',
-				'week' 	: 'Week',
-				'month'	: 'Month',
-				'season': 'Season'}
+TimePeriodsDict = {	'all' 	: 'All',
+					'day' 	: 'Day',
+					'week' 	: 'Week',
+					'month'	: 'Month',
+					'season': 'Season'}
 
-plot_types = ['Autocorrelation','Correlation', 'Plot Data']
+PlotTypesList = ['Autocorrelation','Correlation', 'Plot Data']
 
-
-matplotlib.use("TkAgg")
-style.use("ggplot")
+UPDATE_FLAG = True
 
 LARGE_FONT = ("Verdana", 12)
 NORMAL_FONT = ("Verdana", 10)
@@ -34,34 +34,33 @@ SMALL_FONT = ("Verdana", 8)
 f = Figure()
 a = f.add_subplot(1,1,1)
 
-
 class MeteorologyApp(tk.Tk):
 	"""docstring for MeteorologyApp"""
 	def __init__(self, path = '.\\Data\\bialystok.txt', *args, **kwargs):
 		tk.Tk.__init__(self, *args, **kwargs)
 
-		self.path = path
+		self.City = dt.WeatherData(path)
 
-		self.currType = tk.StringVar()
-		self.currType.set('DBT')
-		self.currCorrType = tk.StringVar()
-		self.currCorrType.set('DBT')
-		self.currVector = tk.StringVar()
-		self.currVector.set('week')
-		self.currPlotType = tk.StringVar()
-		self.currPlotType.set('Autocorrelation')
+		self._category = tk.StringVar()
+		self._category.set('DBT')
+		self._corr_category = tk.StringVar()
+		self._corr_category.set('DBT')
+		self._time_period = tk.StringVar()
+		self._time_period.set('week')
+		self._plot_type = tk.StringVar()
+		self._plot_type.set('Autocorrelation')
 		self.Min = tk.StringVar()
+		self.Min.set('Init-value')
 		self.Max = tk.StringVar()
+		self.Max.set('Init-value')
 		self.Mean = tk.StringVar()
+		self.Mean.set('Init-value')
 		self.Median = tk.StringVar()
+		self.Median.set('Init-value')
 		self.Std = tk.StringVar()
+		self.Std.set('Init-value')
 		self.Var = tk.StringVar()
-		self.Min.set('Hi_ok')
-		self.Max.set('Hi_ok')
-		self.Mean.set('Hi_ok')
-		self.Median.set('Hi_ok')
-		self.Std.set('Hi_ok')
-		self.Var.set('Hi_ok')
+		self.Var.set('Init-value')
 
 		tk.Tk.iconbitmap(self, default='icon.ico')
 		tk.Tk.wm_title(self, " Meteorology")
@@ -87,7 +86,7 @@ class MeteorologyApp(tk.Tk):
 			self.frames[Page] = frame
 			frame.grid(row = 0, column = 0, sticky = 'nsew')
 		
-		self.show_frame(WarningPage)
+		self.show_frame(MainPage)
 
 	def show_frame(self,cont):
 		frame = self.frames[cont]
@@ -104,35 +103,30 @@ class MeteorologyApp(tk.Tk):
 		self.Var.set(stats['var'])
 		self.update()
 
-
-
-
 	def update_plot(self,i=None):
 		a.clear()
-
-		city = dt.WeatherData(self.path) 
 		
-		d_type = self.currType.get()
-		t_interval = self.currVector.get()
-		intr_number = self.frames[MainPage].Edit.get()
+		dCategory = self._category.get()
+		tPeriod = self._time_period.get()
+		tPeriod_numb = self.frames[MainPage].Edit_tPeriod_numb.get()
 		# Add try
-		if intr_number == '':
-			intr_number = 1
+		if tPeriod_numb == '':
+			tPeriod_numb = 1
 		else:
-			intr_number = int(intr_number)
+			tPeriod_numb = int(tPeriod_numb)
 
-		dFrame_uns = city.get_frame(
-			d_type = d_type, 
-			t_interval = t_interval,
-			intr_number = intr_number)
-		self.update_stats(dFrame_uns)
-		dFrame = dFrame_uns.sort_index()
+		dFrame_unsort = self.City.get_frame(
+			d_type = dCategory, 
+			t_interval = tPeriod,
+			intr_number = tPeriod_numb)
+		self.update_stats(dFrame_unsort)
+		dFrame = dFrame_unsort.sort_index()
 		
-		plot_type = self.currPlotType.get()
+		plot_type = self._plot_type.get()
 		if plot_type == 'Autocorrelation':
 			corr_list=[]
 			
-			max_lag = self.frames[MainPage].p_frames[PlotPage].Edit.get()
+			max_lag = self.frames[MainPage].Edit_autoLag.get()
 			# Add try
 			if max_lag == '':
 				max_lag = 40
@@ -145,16 +139,16 @@ class MeteorologyApp(tk.Tk):
 			a.scatter(x_ax, corr_list, s=20)
 
 		elif plot_type == 'Correlation':
-			intr_number2 = self.frames[MainPage].p_frames[PlotPage].Edit2.get()
+			tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
 			# Add try
-			if intr_number2 == '':
-				intr_number2 = 1
+			if tPeriod_numb2 == '':
+				tPeriod_numb2 = 1
 			else:
-				intr_number2 = int(intr_number2)
-			dFrame_second_uns = city.get_frame(
-				d_type = self.currCorrType.get(), 
-				t_interval = t_interval,
-				intr_number = intr_number2)
+				tPeriod_numb2 = int(tPeriod_numb2)
+			dFrame_second_uns = self.City.get_frame(
+				d_type = self._corr_category.get(), 
+				t_interval = tPeriod,
+				intr_number = tPeriod_numb2)
 			dFrame_second = dFrame_second_uns.sort_index()
 			s_x = dFrame.diff()
 			s_y = dFrame_second.diff()
@@ -188,198 +182,200 @@ class MainPage(tk.Frame):
 		self.controller = controller
 
 		self.grid_rowconfigure(0, weight = 1)
-		self.grid_columnconfigure(0, weight = 0)
-		self.grid_columnconfigure(1, weight = 1)
-		#self.grid_columnconfigure(2, weight = 2)
+		self.grid_rowconfigure(1, weight = 2)
+		self.grid_rowconfigure(2, weight = 2)
+		self.grid_columnconfigure(0, weight = 1)
+		self.grid_columnconfigure(1, weight = 2)
 
-		self.fOptions = tk.Frame(self)
-		self.fOptions.grid(row = 0, column = 0, sticky = 'nsw')
-		self.fOptions.grid_rowconfigure(0, weight = 1)
-		self.fOptions.grid_rowconfigure(1, weight = 1)
-		self.fOptions.grid_columnconfigure(0, weight = 1)
+		self.CategoryFrame = tk.LabelFrame(self, text = 'Data types')
+		self.CategoryFrame.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5, rowspan=2)
+		self.Category()
 
+		self.TimePeriodFrame = tk.LabelFrame(self, text = 'Data types')
+		self.TimePeriodFrame.grid(row = 2, column = 0, sticky = 'nsew', padx=5, pady = 5)
+		self.TimePeriod()
 
-		self.DataTypes()
-		self.TimeVector()
+		self.StatisticsFrame = tk.Frame(self)
+		self.StatisticsFrame.grid(row = 1, column = 1, sticky = 'nsew', rowspan = 2)
+		self.Statistics()
+
+		self.ButtonsFrame = tk.Frame(self)
+		self.ButtonsFrame.grid(row = 0, column = 1, sticky = 'nsew')
+		self.Buttons()
+
+		self.PlotFrame = tk.Frame(self)
+		self.PlotFrame.grid(row = 1, column = 1, sticky = 'nsew', rowspan = 2)
 		self.Plot()
 
-	def DataTypes(self):
-		fDataTypes = tk.LabelFrame(self.fOptions, text = 'Data types')
-		fDataTypes.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5)
+		self.PlotOptionsFrame = tk.LabelFrame(self.PlotFrame, text = 'Options')
+		self.PlotOptionsFrame.grid(row = 0, column = 0, sticky = 'nsew')
+		self.PlotOptions()
 
-		label = tk.Label(fDataTypes, text="Choose the data\nyou are interested in:", font=LARGE_FONT)
-		label.pack(pady = 10, padx = 10)
+		self.PlotOptionsTypeFrame = tk.Frame(self.PlotOptionsFrame)
+		self.PlotOptionsTypeFrame.grid(row = 0, column = 0, sticky = 'nsew')
+		self.PlotOptionsType()
 
-		for dType in data_types:
-			tk.Radiobutton(fDataTypes, text=dType, font = NORMAL_FONT,
-				variable=self.controller.currType, value=dType).pack()
+		self.PlotOptionsAutocorrFrame = tk.Frame(self.PlotOptionsFrame)
+		self.PlotOptionsAutocorrFrame.grid(row = 1, column = 0, sticky = 'nsew')
+		self.PlotOptionsAutocorr()
+
+		self.PlotOptionsCorrFrame = tk.Frame(self.PlotOptionsFrame)
+		self.PlotOptionsCorrFrame.grid(row = 1, column = 0, sticky = 'nsew')
+		self.PlotOptionsCorr()
+
+		self.PlotOptionsBlancFrame = tk.Frame(self.PlotOptionsFrame)
+		self.PlotOptionsBlancFrame.grid(row = 1, column = 0, sticky = 'nsew')
+		self.PlotOptionsBlanc()
+
+		self.PlotGraphFrame = tk.Frame(self.PlotFrame)
+		self.PlotGraphFrame.grid(row = 0, column = 1, sticky = 'nsew')
+		self.PlotGraph()
+
+		self.TypesFrames = {'Autocorrelation'	:self.PlotOptionsAutocorrFrame,
+							'Correlation'		:self.PlotOptionsCorrFrame,
+							'Plot Data'			:self.PlotOptionsBlancFrame}
+
+		self.PlotOptionsAutocorrFrame.tkraise()
+		self.StatisticsFrame.tkraise()
 
 
-	def TimeVector(self):	
-		fTimeVector = tk.LabelFrame(self.fOptions, text = 'Time periods',font = NORMAL_FONT)
-		fTimeVector.grid(row = 1, column = 0, sticky = 'nsew', padx=5, pady = 5)
+	def Category(self):
+		Label = tk.Label(self.CategoryFrame, text="Choose the data\nyou are interested in:", font=LARGE_FONT)
+		Label.pack(pady = 10, padx = 10)
 
-		label = tk.Label(fTimeVector, text="Choose the time period\nyou are interested in:", font=LARGE_FONT)
+		for cType in CategoriesList:
+			tk.Radiobutton(self.CategoryFrame, text=cType, font = NORMAL_FONT,
+				variable=self.controller._category, value=cType).pack()
+
+	def TimePeriod(self):	
+		label = tk.Label(self.TimePeriodFrame, text="Choose the time period\nyou are interested in:", font=LARGE_FONT)
 		label.pack(pady = 10, padx = 10)	
 
-		for vType, vLabel in vector_types.items():
-			tk.Radiobutton(fTimeVector, text=vLabel, font = NORMAL_FONT,
-				variable=self.controller.currVector, value=vType).pack()
+		for pType, pLabel in TimePeriodsDict.items():
+			tk.Radiobutton(self.TimePeriodFrame, text=pLabel, font = NORMAL_FONT,
+				variable=self.controller._time_period, value=pType).pack()
 
 		# Improve
-		l_text = "\nSpecify the number of the {}".format(self.controller.currVector.get())
-		label2 = tk.Label(fTimeVector, text=l_text, font=LARGE_FONT)
+		l_text = "\nSpecify the number of the {}".format(self.controller._time_period.get())
+		label2 = tk.Label(self.TimePeriodFrame, text=l_text, font=LARGE_FONT)
 		label2.pack(pady = 10, padx = 10)	
 
-		self.Edit = tk.Entry(fTimeVector, width = 3)
-		self.Edit.pack()
-		self.Edit.insert(0, "1")
+		self.Edit_tPeriod_numb = tk.Entry(self.TimePeriodFrame, width = 3)
+		self.Edit_tPeriod_numb.pack()
+		self.Edit_tPeriod_numb.insert(0, "1")
 
-	def show_frame(self,cont):
-		frame = self.p_frames[cont]
-		frame.tkraise()
+	def Buttons(self):
+		self.ButtonsFrame.grid_columnconfigure(0, weight=1)
+		self.ButtonsFrame.grid_columnconfigure(1, weight=1)
+		self.ButtonsFrame.grid_rowconfigure(0, weight=1)
+
+		StatButton = tk.Button(self.ButtonsFrame, text = "Statistics", font = LARGE_FONT,
+			command = lambda:self.StatisticsFrame.tkraise())
+		StatButton.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5)
+
+		PlotButton = tk.Button(self.ButtonsFrame, text = "Plot", font = LARGE_FONT,
+			command = lambda:self.PlotFrame.tkraise())
+		PlotButton.grid(row = 0, column = 1, sticky = 'nsew', padx=5, pady = 5)	
 
 	def Plot(self):
-		fPlot = tk.LabelFrame(self, text = 'Results',font = NORMAL_FONT)
-		fPlot.grid(row = 0, column = 1, sticky = 'nsew', padx=5)
+		self.PlotFrame.grid_rowconfigure(0, weight = 1)
+		self.PlotFrame.grid_columnconfigure(0, weight = 1)
+		self.PlotFrame.grid_columnconfigure(1, weight = 2)
 
-		fPlot.grid_rowconfigure(0, weight = 1)
-		fPlot.grid_rowconfigure(1, weight = 10)
-		fPlot.grid_columnconfigure(0, weight = 1)
-		fPlot.grid_columnconfigure(1, weight = 1)
+	def Statistics(self):
+		self.StatisticsFrame.grid_columnconfigure(0, weight = 1)
+		self.StatisticsFrame.grid_columnconfigure(1, weight = 1)
+		self.StatisticsFrame.grid_columnconfigure(2, weight = 1)
+		self.StatisticsFrame.grid_columnconfigure(3, weight = 1)
 
-		button1 = tk.Button(fPlot, text = "Statistics", font = LARGE_FONT,
-			command=lambda: self.show_frame(StatisticsPage))
-		button1.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5)
+		self.StatisticsFrame.grid_rowconfigure(0, weight = 1)
+		self.StatisticsFrame.grid_rowconfigure(1, weight = 1)
+		self.StatisticsFrame.grid_rowconfigure(2, weight = 1)
 
-		button2 = tk.Button(fPlot, text = "Plot", font = LARGE_FONT,
-			command=lambda: self.show_frame(PlotPage))
-		button2.grid(row = 0, column = 1, sticky = 'nsew', padx=5, pady = 5)	
+		min_label = tk.Label(self.StatisticsFrame, text="Min: ", font=LARGE_FONT)
+		min_label.grid(row = 0, column = 0, sticky = 'nsew')
+		min_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Min, font=LARGE_FONT)
+		min_ans.grid(row = 0, column = 1, sticky = 'nsew')
+		max_label = tk.Label(self.StatisticsFrame, text="Max: ", font=LARGE_FONT)
+		max_label.grid(row = 0, column = 2, sticky = 'nsew')
+		max_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Max, font=LARGE_FONT)
+		max_ans.grid(row = 0, column = 3, sticky = 'nsew')
+		mean_label = tk.Label(self.StatisticsFrame, text="Mean: ", font=LARGE_FONT)
+		mean_label.grid(row = 1, column = 0, sticky = 'nsew')
+		mean_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Mean, font=LARGE_FONT)
+		mean_ans.grid(row = 1, column = 1, sticky = 'nsew')
+		median_label = tk.Label(self.StatisticsFrame, text="Median: ", font=LARGE_FONT)
+		median_label.grid(row = 1, column = 2, sticky = 'nsew')
+		median_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Median, font=LARGE_FONT)
+		median_ans.grid(row = 1, column = 3, sticky = 'nsew')
+		std_label = tk.Label(self.StatisticsFrame, text="Standart deviation: ", font=LARGE_FONT)
+		std_label.grid(row = 2, column = 0, sticky = 'nsew')
+		std_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Std, font=LARGE_FONT)
+		std_ans.grid(row = 2, column = 1, sticky = 'nsew')
+		varience_label = tk.Label(self.StatisticsFrame, text="Variance: ", font=LARGE_FONT)
+		varience_label.grid(row = 2, column = 2, sticky = 'nsew')
+		varience_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Var, font=LARGE_FONT)
+		varience_ans.grid(row = 2, column = 3, sticky = 'nsew')
 
-		self.p_frames = {}
-		for Page in (PlotPage, StatisticsPage):
-			frame = Page(fPlot, self, self.controller)
-			self.p_frames[Page] = frame
-			frame.grid(row = 1, column = 0, sticky = 'nsew', columnspan = 2)	
+	def PlotOptions(self):
+		self.PlotOptionsFrame.grid_rowconfigure(0, weight = 1)
+		self.PlotOptionsFrame.grid_rowconfigure(1, weight = 1)
+		self.PlotOptionsFrame.grid_columnconfigure(0, weight = 1)
 
-class StatisticsPage(tk.Frame):
-	"""docstring for PageOne"""
-	def __init__(self, parent, controller, master):
-		tk.Frame.__init__(self, parent)
-
-		self.grid_columnconfigure(0, weight = 1)
-		self.grid_columnconfigure(1, weight = 1)
-		self.grid_columnconfigure(2, weight = 1)
-		self.grid_columnconfigure(3, weight = 1)
-
-		self.grid_rowconfigure(0, weight = 1)
-		self.grid_rowconfigure(1, weight = 1)
-		self.grid_rowconfigure(2, weight = 1)
-
-		self.min_label = tk.Label(self, text="Min: ", font=LARGE_FONT)
-		self.min_label.grid(row = 0, column = 0, sticky = 'nsew')
-		self.min_ans = tk.Label(self, textvariable=master.Min, font=LARGE_FONT)
-		self.min_ans.grid(row = 0, column = 1, sticky = 'nsew')
-		self.max_label = tk.Label(self, text="Max: ", font=LARGE_FONT)
-		self.max_label.grid(row = 0, column = 2, sticky = 'nsew')
-		self.max_ans = tk.Label(self, textvariable=master.Max, font=LARGE_FONT)
-		self.max_ans.grid(row = 0, column = 3, sticky = 'nsew')
-		self.mean_label = tk.Label(self, text="Mean: ", font=LARGE_FONT)
-		self.mean_label.grid(row = 1, column = 0, sticky = 'nsew')
-		self.mean_ans = tk.Label(self, textvariable=master.Mean, font=LARGE_FONT)
-		self.mean_ans.grid(row = 1, column = 1, sticky = 'nsew')
-		self.median_label = tk.Label(self, text="Median: ", font=LARGE_FONT)
-		self.median_label.grid(row = 1, column = 2, sticky = 'nsew')
-		self.median_ans = tk.Label(self, textvariable=master.Median, font=LARGE_FONT)
-		self.median_ans.grid(row = 1, column = 3, sticky = 'nsew')
-		self.std_label = tk.Label(self, text="Standart deviation: ", font=LARGE_FONT)
-		self.std_label.grid(row = 2, column = 0, sticky = 'nsew')
-		self.std_ans = tk.Label(self, textvariable=master.Std, font=LARGE_FONT)
-		self.std_ans.grid(row = 2, column = 1, sticky = 'nsew')
-		self.varience_label = tk.Label(self, text="Variance: ", font=LARGE_FONT)
-		self.varience_label.grid(row = 2, column = 2, sticky = 'nsew')
-		self.varience_ans = tk.Label(self, textvariable=master.Var, font=LARGE_FONT)
-		self.varience_ans.grid(row = 2, column = 3, sticky = 'nsew')
-
-class PlotPage(tk.Frame):
-	"""docstring for PageOne"""
-	def __init__(self, parent, controller, master):
-		tk.Frame.__init__(self, parent)
-		self.master = master
-
-		self.grid_rowconfigure(0, weight = 1)
-		self.grid_columnconfigure(0, weight = 0)
-		self.grid_columnconfigure(1, weight = 1)
-
-		self.PlotFrame()
-		self.CorrFrame()
-
-	def PlotFrame(self):
-		fPlotFrame = tk.LabelFrame(self, text = 'Plot',font = NORMAL_FONT)
-		fPlotFrame.grid(row = 0, column = 1, sticky = 'nsew', padx=5, pady = 5)
-
-		canvas = FigureCanvasTkAgg(f, fPlotFrame)
-		canvas.draw()
-		canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady = 5)
-
-		toolbar = NavigationToolbar2Tk(canvas,fPlotFrame)
-		toolbar.update()
-		canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
-	def CorrFrame(self):
-		fShooseFrame = tk.LabelFrame(self, text = 'Plot options',font = NORMAL_FONT)
-		fShooseFrame.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5)
-
-		fShooseFrame.grid_rowconfigure(0, weight = 1)
-		fShooseFrame.grid_rowconfigure(1, weight = 1)
-		fShooseFrame.grid_rowconfigure(2, weight = 1)
-		fShooseFrame.grid_rowconfigure(3, weight = 4)
-		fShooseFrame.grid_columnconfigure(0, weight = 1)
-
-
-		fCorrFrame = tk.Frame(fShooseFrame)
-		fCorrFrame.grid(row = 3, column = 0, sticky = 'nsew', padx=5, pady = 5)
-		fBlankFrame = tk.Frame(fShooseFrame)
-		fBlankFrame.grid(row = 3, column = 0, sticky = 'nsew', padx=5, pady = 5)
-		fAutocorrFrame = tk.Frame(fShooseFrame)
-		fAutocorrFrame.grid(row = 3, column = 0, sticky = 'nsew', padx=5, pady = 5)
-
-		corr_frames = {'Autocorrelation':fAutocorrFrame,'Correlation':fCorrFrame,'Plot Data':fBlankFrame}
+	def PlotOptionsType(self):
+		self.PlotOptionsTypeFrame.grid_rowconfigure(0, weight = 1)
+		self.PlotOptionsTypeFrame.grid_rowconfigure(1, weight = 1)
+		self.PlotOptionsTypeFrame.grid_rowconfigure(2, weight = 1)
+		self.PlotOptionsTypeFrame.grid_columnconfigure(0, weight = 1)
 		
-		for index, pType in enumerate(plot_types):
-			tk.Radiobutton(fShooseFrame, text=pType, font = LARGE_FONT,
-				variable=self.master.currPlotType, value=pType,
-				command = lambda:	corr_frames[self.master.currPlotType.get()].tkraise()
+		for index, pType in enumerate(PlotTypesList):
+			tk.Radiobutton(self.PlotOptionsTypeFrame, text=pType, font = LARGE_FONT,
+				variable=self.controller._plot_type, value=pType,
+				command = lambda:	self.TypesFrames[self.controller._plot_type.get()].tkraise()
 				).grid(row = index, column = 0, 
 				sticky = 'nsew', padx=5, pady = 5)
 
-		for index, dType in enumerate(data_types):
-			tk.Radiobutton(fCorrFrame, text=dType, font = NORMAL_FONT,
-				variable=self.master.currCorrType, value=dType).grid(row = index, column = 0, 
+	def PlotOptionsAutocorr(self):
+		l_text = "\nSpecify the number of the lags"
+		label1 = tk.Label(self.PlotOptionsAutocorrFrame, text=l_text, font=LARGE_FONT)
+		label1.pack(pady = 10, padx = 10)	
+
+		self.Edit_autoLag = tk.Entry(self.PlotOptionsAutocorrFrame, width = 8)
+		self.Edit_autoLag.pack()
+		self.Edit_autoLag.insert(0, "40")
+
+	def PlotOptionsCorr(self):
+		for index, cType in enumerate(CategoriesList):
+			tk.Radiobutton(self.PlotOptionsCorrFrame, text=cType, font = NORMAL_FONT,
+				variable=self.controller._corr_category, value=cType).grid(row = index, column = 0, 
 				sticky = 'nsew', padx=5, pady = 5)
 
 		# improve update
-		l_text2 = "\nSpecify the number of the periods {}".format(self.master.currVector.get())
-		label2 = tk.Label(fCorrFrame, text=l_text2, font=LARGE_FONT)
-		label2.grid(row = len(data_types), column = 0, sticky = 'nsew', padx=5, pady = 5)
+		l_text2 = "\nSpecify the number of the periods {}".format(self.controller._time_period.get())
+		label2 = tk.Label(self.PlotOptionsCorrFrame, text=l_text2, font=LARGE_FONT)
+		label2.grid(row = len(CategoriesList), column = 0, sticky = 'nsew', padx=5, pady = 5)
 
-		self.Edit2 = tk.Entry(fCorrFrame, width = 4)
-		self.Edit2.grid(row = len(data_types)+1, column = 0, sticky = 'nsew', padx=5, pady = 5)
-		self.Edit2.insert(0, "1")
+		self.Edit_tPeriod2_numb = tk.Entry(self.PlotOptionsCorrFrame, width = 4)
+		self.Edit_tPeriod2_numb.grid(row = len(CategoriesList)+1, column = 0, sticky = 'nsew', padx=5, pady = 5)
+		self.Edit_tPeriod2_numb.insert(0, "1")
 
-		l_text = "\nSpecify the number of the lags"
-		label1 = tk.Label(fAutocorrFrame, text=l_text, font=LARGE_FONT)
-		label1.pack(pady = 10, padx = 10)	
+	def PlotOptionsBlanc(self):
+		pass
 
-		self.Edit = tk.Entry(fAutocorrFrame, width = 8)
-		self.Edit.pack()
-		self.Edit.insert(0, "40")
+	def PlotGraph(self):
+		canvas = FigureCanvasTkAgg(f, self.PlotGraphFrame)
+		canvas.draw()
+		canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady = 5)
 
+		toolbar = NavigationToolbar2Tk(canvas,self.PlotGraphFrame)
+		toolbar.update()
+		canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
 def main():
 	app=MeteorologyApp(path = '.\\Data\\bialystok.txt')
 	app.geometry("1280x720")
-	ani = animation.FuncAnimation(f, app.update_plot, interval=1000)
+	if UPDATE_FLAG:
+		ani = animation.FuncAnimation(f, app.update_plot, interval=1000)
 	app.mainloop()
 
 
