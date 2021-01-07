@@ -10,9 +10,14 @@ class WeatherData():
 		'N_60', 'NE_60', 'E_60', 'SE_60', 'S_60', 'SW_60', 'W_60', 'NW_60',
 		'N_90', 'NE_90', 'E_90', 'SE_90', 'S_90', 'SW_90', 'W_90', 'NW_90']
 
-	def __init__(self, path, year = 2013):
-		self.dFrame = pd.read_table(path,
-			delimiter = ' ', names = self.names, skipinitialspace = True, index_col = 0)
+	def __init__(self, path, filetype = 'txt', year = 2013):
+		if filetype=='txt':
+			self.dFrame = pd.read_table(path,
+				delimiter = ' ', names = self.names, skipinitialspace = True, index_col = 0)
+		elif filetype == 'csv':
+			self.dFrame = pd.read_csv(path, skipinitialspace = True, index_col = 0)
+			if self.dFrame.columns[0] != 'M':
+				self.dFrame = pd.read_csv(path, names = self.names, skipinitialspace = True, index_col = 0)
 		self.dFrame.insert(loc = 0, column ='Y', value = year)
 		self.dFrame.loc[self.dFrame['M']==12, "Y"] = year-1
 		date = self.dFrame[['Y','M','D','H']].rename(columns={'Y': 'year', 'M':'month', 'D':'day','H':'hour'})
