@@ -15,6 +15,9 @@ import numpy as np
 
 import data as dt
 
+DEBUG_MODE = False
+log = []
+
 CategoriesList = ['DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY']
 
 TimePeriodsDict = {	'all' 	: 'All',
@@ -49,6 +52,8 @@ class MeteorologyApp(tk.Tk):
 		self._time_period.set('week')
 		self._plot_type = tk.StringVar()
 		self._plot_type.set('Autocorrelation')
+		self._question = tk.StringVar()
+		self._question.set('Specify the number of the week')
 		self.Min = tk.StringVar()
 		self.Min.set('Init-value')
 		self.Max = tk.StringVar()
@@ -109,11 +114,10 @@ class MeteorologyApp(tk.Tk):
 		dCategory = self._category.get()
 		tPeriod = self._time_period.get()
 		tPeriod_numb = self.frames[MainPage].Edit_tPeriod_numb.get()
-		# Add try
-		if tPeriod_numb == '':
-			tPeriod_numb = 1
-		else:
+		try:
 			tPeriod_numb = int(tPeriod_numb)
+		except ValueError:
+			tPeriod_numb = 1	
 
 		dFrame_unsort = self.City.get_frame(
 			d_type = dCategory, 
@@ -127,11 +131,10 @@ class MeteorologyApp(tk.Tk):
 			corr_list=[]
 			
 			max_lag = self.frames[MainPage].Edit_autoLag.get()
-			# Add try
-			if max_lag == '':
-				max_lag = 40
-			else:
+			try:
 				max_lag = int(max_lag)
+			except ValueError:
+				max_lag = 40
 			for lag in range(max_lag):
 				corr_list.append(dFrame.autocorr(lag))
 			x_ax = np.linspace(1,max_lag,max_lag)
@@ -141,10 +144,10 @@ class MeteorologyApp(tk.Tk):
 		elif plot_type == 'Correlation':
 			tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
 			# Add try
-			if tPeriod_numb2 == '':
-				tPeriod_numb2 = 1
-			else:
+			try:
 				tPeriod_numb2 = int(tPeriod_numb2)
+			except ValueError:
+				tPeriod_numb2 = 1
 			dFrame_second_uns = self.City.get_frame(
 				d_type = self._corr_category.get(), 
 				t_interval = tPeriod,
@@ -152,6 +155,10 @@ class MeteorologyApp(tk.Tk):
 			dFrame_second = dFrame_second_uns.sort_index()
 			s_x = dFrame.diff()
 			s_y = dFrame_second.diff()
+			if len(s_x)>len(s_y):
+				s_x = s_x.truncate(s_x.index[0], s_x.index[len(s_y)-1])
+			elif len(s_y)>len(s_x):
+				s_y = s_y.truncate(s_y.index[0], s_y.index[len(s_x)-1])
 			a.scatter(s_x, s_y, s = 5)
 		elif plot_type == 'Plot Data':
 			x_ax = np.linspace(1,len(dFrame),len(dFrame))
@@ -238,7 +245,6 @@ class MainPage(tk.Frame):
 		self.PlotOptionsAutocorrFrame.tkraise()
 		self.StatisticsFrame.tkraise()
 
-
 	def Category(self):
 		Label = tk.Label(self.CategoryFrame, text="Choose the data\nyou are interested in:", font=LARGE_FONT)
 		Label.pack(pady = 10, padx = 10)
@@ -253,11 +259,10 @@ class MainPage(tk.Frame):
 
 		for pType, pLabel in TimePeriodsDict.items():
 			tk.Radiobutton(self.TimePeriodFrame, text=pLabel, font = NORMAL_FONT,
-				variable=self.controller._time_period, value=pType).pack()
+				variable=self.controller._time_period, value=pType,
+				command = lambda: self.new_time_period()).pack()
 
-		# Improve
-		l_text = "\nSpecify the number of the {}".format(self.controller._time_period.get())
-		label2 = tk.Label(self.TimePeriodFrame, text=l_text, font=LARGE_FONT)
+		label2 = tk.Label(self.TimePeriodFrame, textvariable=self.controller._question, font=LARGE_FONT)
 		label2.pack(pady = 10, padx = 10)	
 
 		self.Edit_tPeriod_numb = tk.Entry(self.TimePeriodFrame, width = 3)
@@ -323,17 +328,11 @@ class MainPage(tk.Frame):
 		self.PlotOptionsFrame.grid_columnconfigure(0, weight = 1)
 
 	def PlotOptionsType(self):
-		self.PlotOptionsTypeFrame.grid_rowconfigure(0, weight = 1)
-		self.PlotOptionsTypeFrame.grid_rowconfigure(1, weight = 1)
-		self.PlotOptionsTypeFrame.grid_rowconfigure(2, weight = 1)
-		self.PlotOptionsTypeFrame.grid_columnconfigure(0, weight = 1)
-		
 		for index, pType in enumerate(PlotTypesList):
 			tk.Radiobutton(self.PlotOptionsTypeFrame, text=pType, font = LARGE_FONT,
 				variable=self.controller._plot_type, value=pType,
 				command = lambda:	self.TypesFrames[self.controller._plot_type.get()].tkraise()
-				).grid(row = index, column = 0, 
-				sticky = 'nsew', padx=5, pady = 5)
+				).pack(side = "top", fill = "both")
 
 	def PlotOptionsAutocorr(self):
 		l_text = "\nSpecify the number of the lags"
@@ -347,16 +346,13 @@ class MainPage(tk.Frame):
 	def PlotOptionsCorr(self):
 		for index, cType in enumerate(CategoriesList):
 			tk.Radiobutton(self.PlotOptionsCorrFrame, text=cType, font = NORMAL_FONT,
-				variable=self.controller._corr_category, value=cType).grid(row = index, column = 0, 
-				sticky = 'nsew', padx=5, pady = 5)
+				variable=self.controller._corr_category, value=cType).pack(side = "top", fill = "both")
 
-		# improve update
-		l_text2 = "\nSpecify the number of the periods {}".format(self.controller._time_period.get())
-		label2 = tk.Label(self.PlotOptionsCorrFrame, text=l_text2, font=LARGE_FONT)
-		label2.grid(row = len(CategoriesList), column = 0, sticky = 'nsew', padx=5, pady = 5)
+		label2 = tk.Label(self.PlotOptionsCorrFrame,textvariable=self.controller._question, font=LARGE_FONT)
+		label2.pack(side = "top", fill = "both")
 
 		self.Edit_tPeriod2_numb = tk.Entry(self.PlotOptionsCorrFrame, width = 4)
-		self.Edit_tPeriod2_numb.grid(row = len(CategoriesList)+1, column = 0, sticky = 'nsew', padx=5, pady = 5)
+		self.Edit_tPeriod2_numb.pack(side = "top")
 		self.Edit_tPeriod2_numb.insert(0, "1")
 
 	def PlotOptionsBlanc(self):
@@ -371,12 +367,16 @@ class MainPage(tk.Frame):
 		toolbar.update()
 		canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
+	def new_time_period(self):
+		self.controller._question.set("Specify the number of the {}".format(self.controller._time_period.get()))
+
 def main():
 	app=MeteorologyApp(path = '.\\Data\\bialystok.txt')
 	app.geometry("1280x720")
-	if UPDATE_FLAG:
-		ani = animation.FuncAnimation(f, app.update_plot, interval=1000)
+	ani = animation.FuncAnimation(f, app.update_plot, interval=1000)
 	app.mainloop()
+	if DEBUG_MODE:
+		print(log)
 
 
 if __name__ == '__main__':
