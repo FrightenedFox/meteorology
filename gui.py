@@ -1,53 +1,62 @@
-import matplotlib
-import matplotlib.animation as animation
+import matplotlib.animation as animation 	# matplotlib animations, needed for the line 488
+import matplotlib	# matplotlib inside Tkinter (look ideas.md -> links -> [1])
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
-from matplotlib import style
-from matplotlib import pyplot as plt
+from matplotlib import style 				# better-looking matplotlib, line 8
+from matplotlib import pyplot as plt 		# matplotlib plots tool
 matplotlib.use("TkAgg")
 style.use("ggplot")
 
 import tkinter as tk
-from tkinter import ttk
-from tkinter.filedialog import askopenfilename as tkOpenFile
+from tkinter import ttk 	# for modern widgets as buttons in line 235
+from tkinter.filedialog import askopenfilename as tkOpenFile   
 
 import pandas as pd
 import numpy as np
 
-import data as dt
+import data as dt 	# my own python script data.py
 
+
+# Initializing all names for the Radio Buttons on the panel of choosing data types and time periods 
 CategoriesList = ['DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY']
-
 TimePeriodsDict = {	'all' 	: 'All',
 					'day' 	: 'Day',
 					'week' 	: 'Week',
 					'month'	: 'Month',
 					'season': 'Season'}
-
 PlotTypesList = ['Autocorrelation','Correlation', 'Plot Data']
 
+# Some colours, which are often used in my program
 light_green = '#96f97b'
 inactive_col = 'lightgrey'
 
-UPDATE_FLAG = False
+# Correspond for the updating of the graph and statistics
+UPDATE_FLAG = False		# It has to be false if the input file isn't preloaded
+						# in the beginning of the program
 
+# Predefined fonts for convenience
 ULTRA_FONT = ("Verdana", 14, 'bold')
 BOLD_FONT = ("Verdana", 12, 'bold')
 LARGE_FONT = ("Verdana", 12)
 NORMAL_FONT = ("Verdana", 10)
 SMALL_FONT = ("Verdana", 8)
 
+# Text written on the warning page
 disclaimer = 'ALPHA Weather tracking application.\nUse at your own risk.\nThere is no promise of warranty.'
 disclaimer+= '\n\nDo you agree and continue?'
 
+# Defining a figure 'f' and it's axis 'a' (matplotlib packages) 
 f = Figure()
 a = f.add_subplot(1,1,1)
 
 class MeteorologyApp(tk.Tk):
-	"""docstring for MeteorologyApp"""
+
 	def __init__(self, *args, **kwargs):
+		''' Initializing an object as a child of the Tkinter application class. '''
 		tk.Tk.__init__(self, *args, **kwargs)
 
+		# Initializing some Tkinter variables, which are used to dynamically change 
+		# the text in the Tkinter widgets
 		self._category = tk.StringVar()
 		self._category.set('DBT')
 		self._corr_category = tk.StringVar()
@@ -71,50 +80,68 @@ class MeteorologyApp(tk.Tk):
 		self.Var = tk.StringVar()
 		self.Var.set('Init-value')
 
+		# Setting the icon and the title of the application window
 		tk.Tk.iconbitmap(self, default='icon.ico')
 		tk.Tk.wm_title(self, " Meteorology")
 
-		container = tk.Frame(self)
+		# Initializing the main frame of the application (maybe it is possible to live 
+		container = tk.Frame(self)					# without it, but I found it easier)
 		container.pack(side = "top", fill = "both", expand = True)
-		container.grid_rowconfigure(0, weight = 1)
-		container.grid_columnconfigure(0, weight = 1)
+		container.grid_rowconfigure(0, weight = 1)	# The best explanation of the row/column configure 
+		container.grid_columnconfigure(0, weight = 1)	# function can be found in ideas.md [2]
 
+		# Creating a top menu and 2 buttons there
 		menubar = tk.Menu(container)
 		filemenu = tk.Menu(menubar, tearoff = 0)
 		filemenu.add_command(label='Load...', 
-			command = lambda:self.InitializeFile())
+			command = self.InitializeFile)
 		filemenu.add_separator()
 		filemenu.add_command(label = 'Exit', command = quit)
 		menubar.add_cascade(label = 'File', menu = filemenu)
-
 		tk.Tk.config(self, menu = menubar)
 
+		# Creating a 'page flipper'
 		self.frames = {}
-		for Page in (WarningPage, MainPage):
-			frame = Page(container, self)
-			self.frames[Page] = frame
-			frame.grid(row = 0, column = 0, sticky = 'nsew')
+		for Page in (WarningPage, MainPage):	# Page - a pointer to the class WarningPage, MainPage
+			frame = Page(container, self)		# creating an object frame
+			self.frames[Page] = frame 			# and adding it to the dictionary with the key of its class name
+			frame.grid(row = 0, column = 0, sticky = 'nsew') # Positioning the frame in the container
 		
-		self.show_frame(WarningPage)
+		self.show_frame(WarningPage)  # Starting page
+
+
 
 	def InitializeFile(self):
+		''' Function which is called when the user wants to open a file '''
 		self.path = tkOpenFile(initialdir = '.\\Data\\', title = 'Choose your database', 
-			filetypes=(('Txt files', '*.txt'),('CSV files', '*.csv')))
+			filetypes=(('Txt files', '*.txt'),('CSV files', '*.csv')))		# available types of files
+
+		# Reading an input file if it was chosen
 		if self.path!='':
 			if self.path[-3:]=='txt':
 				self.City = dt.WeatherData(path = self.path, filetype = 'txt')
 			elif self.path[-3:]=='csv':
 				self.City = dt.WeatherData(path = self.path, filetype = 'csv')
-		global UPDATE_FLAG
-		UPDATE_FLAG = True
+
+			# Starting refreshing the plot and the statistics page
+			global UPDATE_FLAG
+			UPDATE_FLAG = True
+
+
 
 	def show_frame(self,cont):
+		''' Pushes a frame 'cont' to the top layer ''' 
 		frame = self.frames[cont]
 		frame.tkraise()
 
+
+
 	def update_stats(self, dFrame):
-		stats_list = [np.min, np.max, np.mean, np.median, np.std, np.var]
-		stats = dFrame.agg(stats_list)
+		''' Updates statistics  '''
+		stats_list = [np.min, np.max, np.mean, np.median, np.std, np.var] 	# The list of functions
+		stats = dFrame.agg(stats_list)			# which have to be aggregated on the DataFrame 'dFrame'
+
+		# Updating captions on the Labels
 		self.Min.set(round(stats['amin'], 3))
 		self.Max.set(round(stats['amax'], 3))
 		self.Mean.set(round(stats['mean'], 3))
@@ -122,12 +149,19 @@ class MeteorologyApp(tk.Tk):
 		self.Std.set(round(stats['std'], 3))
 		self.Var.set(round(stats['var'], 3))
 
+
+
 	def update_plot(self,i=None):
-		engdict = {	'1':'first',
-					'2':'second',
-					'3':'third'}
+		''' Updates plot when UPDATE_FLAG is turned on '''
 
 		def numb_to_eng(numb):
+			''' Inside function, which returns a normalized version of English numerals'''
+			
+			# Some English words used to name the axis on the graph accurately
+			engdict = {	'1':'first',
+						'2':'second',
+						'3':'third'}
+
 			if str(numb)[-1] in engdict.keys() and numb<10:
 				return engdict[str(numb)[-1]] 
 			elif str(numb)[-1] in engdict.keys() and str(numb)[-2:] not in ['11', '12', '13']:
@@ -138,50 +172,65 @@ class MeteorologyApp(tk.Tk):
 			else:
 				return str(numb)+'th'
 		
-		
+		# Default plot title
 		plot_title = ''
 
 		if UPDATE_FLAG:	
+			# Reading the parameters set by the user in the Radio Buttons and Edit
 			dCategory = self._category.get()
 			tPeriod = self._time_period.get()
 			tPeriod_numb = self.frames[MainPage].Edit_tPeriod_numb.get()
-			try:
-				tPeriod_numb = int(tPeriod_numb)
+			# Excepting errors when user tries to enter a new value 
+			try:							# or misspells something
+				tPeriod_numb = int(tPeriod_numb) 
 			except ValueError:
 				tPeriod_numb = 1	
 
 			plot_title += 'Graph of the '
 
+			# Getting a DataFrame with the special time period and data type 
+			# using proprietary python script data.py  
 			dFrame = self.City.get_frame(
 				d_type = dCategory, 
 				t_interval = tPeriod,
 				intr_number = tPeriod_numb)
-			self.update_stats(dFrame)
+			self.update_stats(dFrame) 		# Updating the statistics
 			
+			# Getting the information about which type of the plot is chosen
 			plot_type = self._plot_type.get()
+			# and running one of the following tasks with that information
+
 			if plot_type == 'Autocorrelation':
-				a.clear()
+				a.clear()	# Clearing the previous axes
 				corr_list=[]
 				plot_title += 'autocorrelation function'
 
+				# Getting the number of lags chosen by the user
 				max_lag = self.frames[MainPage].Edit_autoLag.get()
-				try:
+				# Excepting errors when user tries to enter a new value 
+				try:							# or misspells something
 					max_lag = int(max_lag)
 				except ValueError:
 					max_lag = 40
 				for lag in range(max_lag):
 					corr_list.append(dFrame.autocorr(lag))
+
+				# same as in the Matlab language (linearly spaced vector)
 				x_ax = np.linspace(1,max_lag,max_lag)
 				a.set_xlabel('Lag')
 				a.set_ylabel('{} autocorrelation'.format(dCategory))
+
+				# Plotting the line on the 0 to improve graph readability
 				a.eventplot([0], orientation='vertical',linewidths=2.0, lineoffsets=0, linelengths=2*(max_lag+10))
 				a.scatter(x_ax, corr_list, s=25)
 				a.vlines(x_ax, [0 for i in range(max_lag)], corr_list)
 				a.set_xlim((-2,max_lag+2))
 
 			elif plot_type == 'Correlation':
-				a.clear()
+				a.clear()	# Clearing the previous axes
 
+				# Getting a second DataFrame with the special data type 
+				# but same time period
 				tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
 				try:
 					tPeriod_numb2 = int(tPeriod_numb2)
@@ -192,23 +241,30 @@ class MeteorologyApp(tk.Tk):
 					d_type = dCategory2, 
 					t_interval = tPeriod,
 					intr_number = tPeriod_numb2)
-				s_x = dFrame.diff().dropna()
-				s_y = dFrame_second.diff().dropna()
 
+				# Clearing the Pandas Series from empty spaces (dropna)
+				s_x = dFrame.diff().dropna() # and finding the difference between 
+				s_y = dFrame_second.diff().dropna()	# neighbour numbers
+
+				# Creating a label of the axis
 				if tPeriod == 'all':
 					a.set_xlabel('{} differences, whole year'.format(dCategory))
 					a.set_ylabel('{} differences, whole year'.format(dCategory2))
 				else:
 					a.set_xlabel('{} differences, {} {}'.format(dCategory, numb_to_eng(tPeriod_numb), tPeriod))
 					a.set_ylabel('{} differences, {} {}'.format(dCategory2, numb_to_eng(tPeriod_numb2), tPeriod))
-					
+				
+				# Making sure that both series are equal (important for seasons and months comparison)
+				# truncate method cuts the Pandas Series (ideas.md [3])
 				if len(s_x)>len(s_y):
-					s_x = s_x.truncate(s_x.index[0], s_x.index[len(s_y)-1])
+					s_x = s_x.truncate(s_x.index[0], s_x.index[len(s_y)-1]) 
 				elif len(s_y)>len(s_x):
 					s_y = s_y.truncate(s_y.index[0], s_y.index[len(s_x)-1])
 				a.scatter(s_x, s_y, s = 5)
 
-				s_x.reset_index(level = 0, drop = True,inplace=True)
+				# Removing date indexes from the series 
+				# (otherwise if different months where chosen, it conflicts with Pandas .corr method)
+				s_x.reset_index(level = 0, drop = True,inplace=True) 
 				s_y.reset_index(level = 0, drop = True,inplace=True)
 				corr_val = round(s_x.corr(s_y),2)
 				plot_title += 'correlation function, ({})'.format(corr_val)

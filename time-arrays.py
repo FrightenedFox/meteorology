@@ -4,7 +4,6 @@ def read_file(path):
 	with open(path, mode='r') as file:
 		int_index = [0, 1, 2, 3, 5, 8]
 		data_matrix = []
-		data_dict = {}
 		for line in file:
 			data_row = []
 			for ind, record in enumerate(line.split()):
@@ -13,8 +12,7 @@ def read_file(path):
 				else:
 					data_row.append(int(record))
 			data_matrix.append(data_row)
-	return data_matrix, data_dict
-
+	return data_matrix
 
 class Database(object):
 	"""docstring for Database"""
@@ -74,9 +72,28 @@ class Database(object):
 
 
 
-# o = Database('.\\Data\\bialystok.txt')
+# obj = Database('.\\Data\\bialystok.txt')
 # for i in range(0, 4):
 # 	for j in range(0, 24, 6):
 # 		print(o.mSeasons[i][j][:4])
 # print(o.mSeasons[0][1000][:4])
 # print(o.mHours[1000][:4])
+
+# def month_vector(rok, month):
+# 	output = []
+# 	previos = -1
+# 	for record in rok:
+# 		if record[1] == month:
+# 			output.append(record)
+# 			previos = month
+# 		elif previos == month:
+# 			break
+
+# 	for record in output:
+# 		print(record[:5])
+
+# def week_number(rok, week):
+# 	return rok[(week-1)*168:week*168]
+
+
+# month_vector(obj.mHours, 4)
