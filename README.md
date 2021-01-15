@@ -17,20 +17,24 @@ The aim of the project was creating an application which would be able to show a
 In this chapter, I would like to demonstrate some screen shots of the application.  
   
 After loading the file, the application shows some summary about the data. A user is able to choose which type of data and time period he is interested in. The example of the summary statistics is shown on the image below.
+  
 ![Statistics page](/Images/statistics.png)  
   
 ***  
   
 The user is also able to choose *Plot* page, where the plots are created. The default plot is an autocorrelation plot. The example of the autocorrelation function graph can be found on the screen shot below.  
+  
 ![Autocorrelation function](/Images/autocorrelation.png)  
   
 ***
   
 Except from the default graph type, which is autocorrelation, there are two more types, namely the correlation function and the data plot.
-There are two images below, on which the outcome of the program is shown.
-![Correlation function](/Images/correlation.png)
-![Plot data](/Images/plot_data.png)
-
+There are two images below, on which the outcome of the program is shown.  
+  
+![Correlation function](/Images/correlation.png)  
+  
+![Plot data](/Images/plot_data.png)  
+  
   
 ## Future ideas  
   
@@ -73,6 +77,7 @@ The archive with the data used in this project can be reached by [the following 
 ### Data explanation  
 
 Some notes about what the data in the archive mean are held on [the following web page](https://archiwum.miir.gov.pl/strony/zadania/budownictwo/charakterystyka-energetyczna-budynkow/dane-do-obliczen-energetycznych-budynkow-1/#Typowe%20lata%20meteorologiczne%20i%20statystyczne%20dane%20klimatyczne%20do%20oblicze%C5%84%20energetycznych%20budynk%C3%B3w).  
+  
   
 The meaning of the abbreviations are given below:  
 
