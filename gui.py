@@ -1,4 +1,4 @@
-import matplotlib.animation as animation 	# matplotlib animations, needed for the line 488
+import matplotlib.animation as animation 	# matplotlib animations, needed for the line 644
 import matplotlib	# matplotlib inside Tkinter (look ideas.md -> links -> [1])
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -8,14 +8,13 @@ matplotlib.use("TkAgg")
 style.use("ggplot")
 
 import tkinter as tk
-from tkinter import ttk 	# for modern widgets as buttons in line 235
+from tkinter import ttk 	# for modern widgets as buttons in line 334
 from tkinter.filedialog import askopenfilename as tkOpenFile   
 
 import pandas as pd
 import numpy as np
 
 import data as dt 	# my own python script data.py
-
 
 # Initializing all names for the Radio Buttons on the panel of choosing data types and time periods 
 CategoriesList = ['DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY']
@@ -32,7 +31,8 @@ inactive_col = 'lightgrey'
 
 # Correspond for the updating of the graph and statistics
 UPDATE_FLAG = False		# It has to be false if the input file isn't preloaded
-						# in the beginning of the program
+NEW_FILE = False		# in the beginning of the program
+
 
 # Predefined fonts for convenience
 ULTRA_FONT = ("Verdana", 14, 'bold')
@@ -48,6 +48,8 @@ disclaimer+= '\n\nDo you agree and continue?'
 # Defining a figure 'f' and it's axis 'a' (matplotlib packages) 
 f = Figure()
 a = f.add_subplot(1,1,1)
+
+
 
 class MeteorologyApp(tk.Tk):
 
@@ -107,6 +109,14 @@ class MeteorologyApp(tk.Tk):
 			self.frames[Page] = frame 			# and adding it to the dictionary with the key of its class name
 			frame.grid(row = 0, column = 0, sticky = 'nsew') # Positioning the frame in the container
 		
+		# Saving default values of settings
+		self.old_dCategory = self._category.get()
+		self.old_tPeriod = self._time_period.get()
+		self.old_tPeriod_numb = self.frames[MainPage].Edit_tPeriod_numb.get()
+		self.old_dCategory2 = self._corr_category.get()
+		self.old_tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
+		self.old_plot_type = self._plot_type.get()
+
 		self.show_frame(WarningPage)  # Starting page
 
 
@@ -124,8 +134,9 @@ class MeteorologyApp(tk.Tk):
 				self.City = dt.WeatherData(path = self.path, filetype = 'csv')
 
 			# Starting refreshing the plot and the statistics page
-			global UPDATE_FLAG
+			global UPDATE_FLAG, NEW_FILE
 			UPDATE_FLAG = True
+			NEW_FILE = True
 
 
 
@@ -151,8 +162,8 @@ class MeteorologyApp(tk.Tk):
 
 
 
-	def update_plot(self,i=None):
-		''' Updates plot when UPDATE_FLAG is turned on '''
+	def update_corr(self, dFrame, dFrame_second):
+		''' Updates correlation graph '''
 
 		def numb_to_eng(numb):
 			''' Inside function, which returns a normalized version of English numerals'''
@@ -171,137 +182,171 @@ class MeteorologyApp(tk.Tk):
 					return str(numb)+'st'
 			else:
 				return str(numb)+'th'
+
+		# Clearing the Pandas Series from empty spaces (dropna)
+		s_x = dFrame.diff().dropna() # and finding the difference between 
+		s_y = dFrame_second.diff().dropna()	# neighbour numbers
+
+		# Creating a label of the axis
+		if self.tPeriod == 'all':
+			a.set_xlabel('{} differences, whole year'.format(self.dCategory))
+			a.set_ylabel('{} differences, whole year'.format(self.dCategory2))
+		else:
+			a.set_xlabel('{} differences, {} {}'.format(self.dCategory, numb_to_eng(self.tPeriod_numb), self.tPeriod))
+			a.set_ylabel('{} differences, {} {}'.format(self.dCategory2, numb_to_eng(self.tPeriod_numb2), self.tPeriod))
 		
-		# Default plot title
-		plot_title = ''
+		# Making sure that both series are equal (important for seasons and months comparison)
+		# truncate method cuts the Pandas Series (ideas.md [3])
+		if len(s_x)>len(s_y):
+			s_x = s_x.truncate(s_x.index[0], s_x.index[len(s_y)-1]) 
+		elif len(s_y)>len(s_x):
+			s_y = s_y.truncate(s_y.index[0], s_y.index[len(s_x)-1])
+		a.scatter(s_x, s_y, s = 5)
 
-		if UPDATE_FLAG:	
+		# Removing date indexes from the series 
+		# (otherwise if different months where chosen, it conflicts with Pandas .corr method)
+		s_x.reset_index(level = 0, drop = True,inplace=True) 
+		s_y.reset_index(level = 0, drop = True,inplace=True)
+
+		# Finding the value of correlation
+		corr_val = round(s_x.corr(s_y),2)
+		return 'correlation function, ({})'.format(corr_val)
+
+
+
+	def update_plot(self, dFrame):
+		''' Updates data graph '''		
+		# Sorting the DataFrame not to create some holes in the plot
+		dFrame = dFrame.sort_index()
+		x_ax = np.linspace(1,len(dFrame),len(dFrame))
+		a.set_xlabel('{}s'.format(TimePeriodsDict[self.tPeriod]))
+		a.set_ylabel('{}'.format(self.dCategory))
+		a.plot(dFrame.index, dFrame)
+
+
+
+	def update_autocorr(self, dFrame):
+		''' Updates autocorrelation graph '''
+
+		a.clear()	# Clearing the previous axes
+		corr_list=[]
+		# Getting the number of lags chosen by the user
+		max_lag = self.frames[MainPage].Edit_autoLag.get()
+		# Excepting errors when user tries to enter a new value 
+		try:							# or misspells something
+			max_lag = int(max_lag)
+		except ValueError:
+			max_lag = 40
+		for lag in range(max_lag):
+			corr_list.append(dFrame.autocorr(lag))
+		# same as in the Matlab language (linearly spaced vector)
+		x_ax = np.linspace(1,max_lag,max_lag)
+		a.set_xlabel('Lag')
+		a.set_ylabel('{} autocorrelation'.format(self.dCategory))
+		# Plotting the line on the 0 to improve graph readability
+		a.eventplot([0], orientation='vertical',linewidths=2.0, lineoffsets=0, linelengths=2*(max_lag+10))
+		a.scatter(x_ax, corr_list, s=25)
+		a.vlines(x_ax, [0 for i in range(max_lag)], corr_list)
+		a.set_xlim((-2,max_lag+2))
+
+
+
+	def check_update(self, i = None):
+		''' Updates plot when user changes any settings'''
+		if UPDATE_FLAG:
+			global NEW_FILE
 			# Reading the parameters set by the user in the Radio Buttons and Edit
-			dCategory = self._category.get()
-			tPeriod = self._time_period.get()
-			tPeriod_numb = self.frames[MainPage].Edit_tPeriod_numb.get()
-			# Excepting errors when user tries to enter a new value 
-			try:							# or misspells something
-				tPeriod_numb = int(tPeriod_numb) 
-			except ValueError:
-				tPeriod_numb = 1	
+			self.dCategory = self._category.get()
+			self.tPeriod = self._time_period.get()
+			self.tPeriod_numb = self.frames[MainPage].Edit_tPeriod_numb.get()
 
-			plot_title += 'Graph of the '
-
-			# Getting a DataFrame with the special time period and data type 
-			# using proprietary python script data.py  
-			dFrame = self.City.get_frame(
-				d_type = dCategory, 
-				t_interval = tPeriod,
-				intr_number = tPeriod_numb)
-			self.update_stats(dFrame) 		# Updating the statistics
+			# Getting a second DataFrame with the special data type 
+			# but same time period
+			self.dCategory2 = self._corr_category.get()
+			self.tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
 			
 			# Getting the information about which type of the plot is chosen
 			plot_type = self._plot_type.get()
-			# and running one of the following tasks with that information
 
-			if plot_type == 'Autocorrelation':
+			# Checking if user changed something
+			if NEW_FILE or (self.dCategory, self.tPeriod, self.tPeriod_numb, self.dCategory2, 
+				self.tPeriod_numb2, plot_type) != (
+				self.old_dCategory, self.old_tPeriod, self.old_tPeriod_numb, 
+				self.old_dCategory2, self.old_tPeriod_numb2, self.old_plot_type):
+
+				plot_title = ''
 				a.clear()	# Clearing the previous axes
-				corr_list=[]
-				plot_title += 'autocorrelation function'
-
-				# Getting the number of lags chosen by the user
-				max_lag = self.frames[MainPage].Edit_autoLag.get()
 				# Excepting errors when user tries to enter a new value 
 				try:							# or misspells something
-					max_lag = int(max_lag)
+					self.tPeriod_numb = int(self.tPeriod_numb) 
 				except ValueError:
-					max_lag = 40
-				for lag in range(max_lag):
-					corr_list.append(dFrame.autocorr(lag))
+					self.tPeriod_numb = 1	
+				plot_title += 'Graph of the '
+				# Getting a DataFrame with the special time period and data type 
+				# using proprietary python script data.py  
+				dFrame = self.City.get_frame(
+					d_type = self.dCategory, 
+					t_interval = self.tPeriod,
+					intr_number = self.tPeriod_numb)
 
-				# same as in the Matlab language (linearly spaced vector)
-				x_ax = np.linspace(1,max_lag,max_lag)
-				a.set_xlabel('Lag')
-				a.set_ylabel('{} autocorrelation'.format(dCategory))
+				self.update_stats(dFrame) 		# Updating the statistics
 
-				# Plotting the line on the 0 to improve graph readability
-				a.eventplot([0], orientation='vertical',linewidths=2.0, lineoffsets=0, linelengths=2*(max_lag+10))
-				a.scatter(x_ax, corr_list, s=25)
-				a.vlines(x_ax, [0 for i in range(max_lag)], corr_list)
-				a.set_xlim((-2,max_lag+2))
+				if plot_type == 'Autocorrelation':
+					plot_title += 'autocorrelation function'
+					self.update_autocorr(dFrame)
 
-			elif plot_type == 'Correlation':
-				a.clear()	# Clearing the previous axes
+				elif plot_type == 'Correlation':
 
-				# Getting a second DataFrame with the special data type 
-				# but same time period
-				tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
-				try:
-					tPeriod_numb2 = int(tPeriod_numb2)
-				except ValueError:
-					tPeriod_numb2 = 1
-				dCategory2 = self._corr_category.get()
-				dFrame_second = self.City.get_frame(
-					d_type = dCategory2, 
-					t_interval = tPeriod,
-					intr_number = tPeriod_numb2)
+					try:
+						self.tPeriod_numb2 = int(self.tPeriod_numb2)
+					except ValueError:
+						self.tPeriod_numb2 = 1
+					dFrame_second = self.City.get_frame(
+						d_type = self.dCategory2, 
+						t_interval = self.tPeriod,
+						intr_number = self.tPeriod_numb2)
 
-				# Clearing the Pandas Series from empty spaces (dropna)
-				s_x = dFrame.diff().dropna() # and finding the difference between 
-				s_y = dFrame_second.diff().dropna()	# neighbour numbers
+					plot_title += self.update_corr(dFrame, dFrame_second)
 
-				# Creating a label of the axis
-				if tPeriod == 'all':
-					a.set_xlabel('{} differences, whole year'.format(dCategory))
-					a.set_ylabel('{} differences, whole year'.format(dCategory2))
-				else:
-					a.set_xlabel('{} differences, {} {}'.format(dCategory, numb_to_eng(tPeriod_numb), tPeriod))
-					a.set_ylabel('{} differences, {} {}'.format(dCategory2, numb_to_eng(tPeriod_numb2), tPeriod))
-				
-				# Making sure that both series are equal (important for seasons and months comparison)
-				# truncate method cuts the Pandas Series (ideas.md [3])
-				if len(s_x)>len(s_y):
-					s_x = s_x.truncate(s_x.index[0], s_x.index[len(s_y)-1]) 
-				elif len(s_y)>len(s_x):
-					s_y = s_y.truncate(s_y.index[0], s_y.index[len(s_x)-1])
-				a.scatter(s_x, s_y, s = 5)
+				elif plot_type == 'Plot Data':
+					plot_title += 'data values'
+					self.update_plot(dFrame)
 
-				# Removing date indexes from the series 
-				# (otherwise if different months where chosen, it conflicts with Pandas .corr method)
-				s_x.reset_index(level = 0, drop = True,inplace=True) 
-				s_y.reset_index(level = 0, drop = True,inplace=True)
-				corr_val = round(s_x.corr(s_y),2)
-				plot_title += 'correlation function, ({})'.format(corr_val)
-			
-			elif plot_type == 'Plot Data':
-				dFrame = dFrame.sort_index()
-				a.clear()
-				plot_title += 'data values'
-				x_ax = np.linspace(1,len(dFrame),len(dFrame))
-				a.set_xlabel('{}s'.format(TimePeriodsDict[tPeriod]))
-				a.set_ylabel('{}'.format(dCategory))
-				a.plot(dFrame.index, dFrame)
-		a.set_title(plot_title)
+				a.set_title(plot_title)
+				NEW_FILE = False
+				# Saving new settings
+				self.old_dCategory = self._category.get()
+				self.old_tPeriod = self._time_period.get()
+				self.old_tPeriod_numb = self.frames[MainPage].Edit_tPeriod_numb.get()
+				self.old_dCategory2 = self._corr_category.get()
+				self.old_tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
+				self.old_plot_type = self._plot_type.get()
 
 
 
 class WarningPage(tk.Frame):
-	"""docstring for WarningPage"""
 	def __init__(self, parent, controller):
+		''' Initializing an object as a child of the Tkinter Frame class. '''
 		tk.Frame.__init__(self, parent)
 		label = tk.Label(self, text=disclaimer, font=LARGE_FONT)
 		label.pack(pady = 10, padx = 10)
 
 		button1 = ttk.Button(self, text = "Agree",
-			command=lambda: controller.show_frame(MainPage))
-		button1.pack()
+			command=lambda: controller.show_frame(MainPage))	# Here lambda is used to pass the 
+		button1.pack()										 	# arguments of the inside function
 
 		button2 = ttk.Button(self, text = "Disagree", 
 			command=quit)
 		button2.pack()
 
+
+
 class MainPage(tk.Frame):
-	"""docstring for PageOne"""
 	def __init__(self, parent, controller):
+		''' Initializing an object as a child of the Tkinter Frame class. '''
 		tk.Frame.__init__(self, parent)
 		self.controller = controller
-		self.defaultcolor = self.cget('bg')
+		self.defaultcolor = self.cget('bg') # Takes current colour of the Frame (default colour)
 
 		self.grid_rowconfigure(0, weight = 1)
 		self.grid_rowconfigure(1, weight = 2)
@@ -309,6 +354,9 @@ class MainPage(tk.Frame):
 		self.grid_columnconfigure(0, weight = 1)
 		self.grid_columnconfigure(1, weight = 2)
 
+		# Don't know exactly why, but it is impossible to use 'page flipper'(line 105) inside another page.
+		# (the problem seems to appear in the 'Frame' initialization function)
+		# So that all children frames of the page must be initialized individually
 		self.CategoryFrame = tk.LabelFrame(self, text = 'Data types')
 		self.CategoryFrame.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5, rowspan=2)
 		self.Category()
@@ -357,26 +405,33 @@ class MainPage(tk.Frame):
 							'Correlation'		:self.PlotOptionsCorrFrame,
 							'Plot Data'			:self.PlotOptionsBlancFrame}
 
+		# Defining default pages
 		self.PlotOptionsAutocorrFrame.tkraise()
 		self.StatisticsFrame.tkraise()
 
+
+
 	def Category(self):
-		
+		''' Defining the CategoryFrame children '''
 		self.CategoryRadiobuttons = {}
 
 		Label = tk.Label(self.CategoryFrame, text="Choose the data\nyou are interested in:", font=LARGE_FONT)
 		Label.pack()
 
+		# Adding RadioButton objects to the 'CategoryRadiobuttons' dictionary,
+		# for them being able to be recoloured
 		for cType in CategoriesList:
 			self.CategoryRadiobuttons[cType] = tk.Radiobutton(self.CategoryFrame, 
 				text=cType, font = NORMAL_FONT,	variable=self.controller._category, value=cType,
 				command = lambda:self.ActivateRadioButton(self.controller._category, self.CategoryRadiobuttons))
-
 			self.CategoryRadiobuttons[cType].pack()
 
 		self.CategoryRadiobuttons['DBT'].config(fg='green')
 
+
+
 	def ActivateRadioButton(self, RBnameVar, RBdict):
+		''' Changes colour of the RadioButton when it is pressed.'''
 		RBname = RBnameVar.get()
 		for key, RBobject in RBdict.items():
 			if key!=RBname:
@@ -385,13 +440,16 @@ class MainPage(tk.Frame):
 				RBobject.config(fg='green')
 
 
-	def TimePeriod(self):	
 
+	def TimePeriod(self):	
+		''' Defining the TimePeriodFrame children '''
 		self.TimePeriodsRadiobuttons = {}
 
 		label = tk.Label(self.TimePeriodFrame, text="Choose the time period\nyou are interested in:", font=LARGE_FONT)
 		label.pack(pady = 10, padx = 10)	
 
+		# Same as with the Category RadioButtons (later RB), but this time the names are stored in the dictionary,
+		# because the RB text has to be different from the 'data.py' notations
 		for pType, pLabel in TimePeriodsDict.items():
 			self.TimePeriodsRadiobuttons[pType] = tk.Radiobutton(self.TimePeriodFrame, 
 				text=pLabel, font = NORMAL_FONT, variable=self.controller._time_period, value=pType,
@@ -399,47 +457,65 @@ class MainPage(tk.Frame):
 			self.TimePeriodsRadiobuttons[pType].pack()
 		self.TimePeriodsRadiobuttons['week'].config(fg = 'green')
 
+
+
 		def new_time_period(RBnameVar, RBdict):
+			''' The command of the RadioButton'''
 			self.controller._question.set("Specify the number\nof the {}".format(self.controller._time_period.get()))
 			self.ActivateRadioButton(RBnameVar, RBdict)
 		
 		label2 = tk.Label(self.TimePeriodFrame, textvariable=self.controller._question, font=LARGE_FONT)
 		label2.pack(pady = 10, padx = 10)	
 
+		# Creating a text field with its own Integer Variable
 		self.Edit_tPeriod_numb = tk.Entry(self.TimePeriodFrame, width = 3)
 		self.Edit_tPeriod_numb.pack()
 		self.Edit_tPeriod_numb.insert(0, "1")
 
+
+
 	def Buttons(self):
+		''' Defining the ButtonFrame children '''
 		self.ButtonsFrame.grid_columnconfigure(0, weight=1)
 		self.ButtonsFrame.grid_columnconfigure(1, weight=1)
 		self.ButtonsFrame.grid_rowconfigure(0, weight=1)
 
-		self.StatButton = tk.Button(self.ButtonsFrame, text = "Statistics", font = ULTRA_FONT,bg = light_green,
-			command = lambda:self.BStatFunc())
-		self.StatButton.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5)
+		def BStatFunc():
+			''' Statistics button command '''
+			self.StatisticsFrame.tkraise()
+			StatButton.config(bg = light_green)
+			PlotButton.config(bg = inactive_col)
 
-		self.PlotButton = tk.Button(self.ButtonsFrame, text = "Plot", font = ULTRA_FONT, bg = inactive_col,
-			command = lambda:self.BPlotFunc())
-		self.PlotButton.grid(row = 0, column = 1, sticky = 'nsew', padx=5, pady = 5)	
+		def BPlotFunc():
+			''' Plot button command '''
+			self.PlotFrame.tkraise()
+			PlotButton.config(bg = light_green)
+			StatButton.config(bg = inactive_col)
 
-	def BStatFunc(self):
-		self.StatisticsFrame.tkraise()
-		self.StatButton.config(bg = light_green)
-		self.PlotButton.config(bg = inactive_col)
+		StatButton = tk.Button(self.ButtonsFrame, text = "Statistics", font = ULTRA_FONT,bg = light_green,
+			command = BStatFunc)
+		StatButton.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5)
 
-	def BPlotFunc(self):
-		self.PlotFrame.tkraise()
-		self.PlotButton.config(bg = light_green)
-		self.StatButton.config(bg = inactive_col)
+		PlotButton = tk.Button(self.ButtonsFrame, text = "Plot", font = ULTRA_FONT, bg = inactive_col,
+			command = BPlotFunc)
+		PlotButton.grid(row = 0, column = 1, sticky = 'nsew', padx=5, pady = 5)	
+
+
 
 
 	def Plot(self):
+		''' Defining the PlotFrame children.
+		(actually they are defined in the __init__ function and there is no reason to create 
+		a separate function for 3 lines of code, but this decision was made to unify the way
+		of the Frame initialization)'''
 		self.PlotFrame.grid_rowconfigure(0, weight = 1)
 		self.PlotFrame.grid_columnconfigure(0, weight = 1)
 		self.PlotFrame.grid_columnconfigure(1, weight = 2)
 
+
+
 	def Statistics(self):
+		''' Defining the StatisticsFrame children '''
 		self.StatisticsFrame.grid_columnconfigure(0, weight = 1)
 		self.StatisticsFrame.grid_columnconfigure(1, weight = 1)
 		self.StatisticsFrame.grid_columnconfigure(2, weight = 1)
@@ -449,37 +525,44 @@ class MainPage(tk.Frame):
 		self.StatisticsFrame.grid_rowconfigure(1, weight = 1)
 		self.StatisticsFrame.grid_rowconfigure(2, weight = 1)
 
-		min_label = tk.Label(self.StatisticsFrame, text="Min: ", font=BOLD_FONT)
-		min_label.grid(row = 0, column = 0, sticky = 'nse')
-		min_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Min, font=LARGE_FONT)
-		min_ans.grid(row = 0, column = 1, sticky = 'nsw')
-		max_label = tk.Label(self.StatisticsFrame, text="Max: ", font=BOLD_FONT)
-		max_label.grid(row = 0, column = 2, sticky = 'nse')
-		max_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Max, font=LARGE_FONT)
-		max_ans.grid(row = 0, column = 3, sticky = 'nsw')
-		mean_label = tk.Label(self.StatisticsFrame, text="Mean: ", font=BOLD_FONT)
-		mean_label.grid(row = 1, column = 0, sticky = 'nse')
-		mean_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Mean, font=LARGE_FONT)
-		mean_ans.grid(row = 1, column = 1, sticky = 'nsw')
-		median_label = tk.Label(self.StatisticsFrame, text="Median: ", font=BOLD_FONT)
-		median_label.grid(row = 1, column = 2, sticky = 'nse')
-		median_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Median, font=LARGE_FONT)
-		median_ans.grid(row = 1, column = 3, sticky = 'nsw')
-		std_label = tk.Label(self.StatisticsFrame, text="Standart \ndeviation: ", font=BOLD_FONT)
-		std_label.grid(row = 2, column = 0, sticky = 'nse')
-		std_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Std, font=LARGE_FONT)
-		std_ans.grid(row = 2, column = 1, sticky = 'nsw')
-		varience_label = tk.Label(self.StatisticsFrame, text="Variance: ", font=BOLD_FONT)
-		varience_label.grid(row = 2, column = 2, sticky = 'nse')
-		varience_ans = tk.Label(self.StatisticsFrame, textvariable=self.controller.Var, font=LARGE_FONT)
-		varience_ans.grid(row = 2, column = 3, sticky = 'nsw')
+		tk.Label(self.StatisticsFrame, text="Min: ", font=BOLD_FONT).grid(
+			row = 0, column = 0, sticky = 'nse')
+		tk.Label(self.StatisticsFrame, text="Max: ", font=BOLD_FONT).grid(
+			row = 0, column = 2, sticky = 'nse')
+		tk.Label(self.StatisticsFrame, text="Mean: ", font=BOLD_FONT).grid(
+			row = 1, column = 0, sticky = 'nse')
+		tk.Label(self.StatisticsFrame, text="Median: ", font=BOLD_FONT).grid(
+			row = 1, column = 2, sticky = 'nse')
+		tk.Label(self.StatisticsFrame, text="Standart \ndeviation: ", font=BOLD_FONT).grid(
+			row = 2, column = 0, sticky = 'nse')
+		tk.Label(self.StatisticsFrame, text="Variance: ", font=BOLD_FONT).grid(
+			row = 2, column = 2, sticky = 'nse')
+		
+		tk.Label(self.StatisticsFrame, textvariable=self.controller.Min, font=LARGE_FONT).grid(
+			row = 0, column = 1, sticky = 'nsw')
+		tk.Label(self.StatisticsFrame, textvariable=self.controller.Max, font=LARGE_FONT).grid(
+			row = 0, column = 3, sticky = 'nsw')
+		tk.Label(self.StatisticsFrame, textvariable=self.controller.Mean, font=LARGE_FONT).grid(
+			row = 1, column = 1, sticky = 'nsw')
+		tk.Label(self.StatisticsFrame, textvariable=self.controller.Median, font=LARGE_FONT).grid(
+			row = 1, column = 3, sticky = 'nsw')
+		tk.Label(self.StatisticsFrame, textvariable=self.controller.Std, font=LARGE_FONT).grid(
+			row = 2, column = 1, sticky = 'nsw')
+		tk.Label(self.StatisticsFrame, textvariable=self.controller.Var, font=LARGE_FONT).grid(
+			row = 2, column = 3, sticky = 'nsw')
+
+
 
 	def PlotOptions(self):
+		''' Defining the PlotOptionsFrame children '''
 		self.PlotOptionsFrame.grid_rowconfigure(0, weight = 1)
 		self.PlotOptionsFrame.grid_rowconfigure(1, weight = 1)
 		self.PlotOptionsFrame.grid_columnconfigure(0, weight = 1)
 
+
+
 	def PlotOptionsType(self):
+		''' Defining the PlotOptionsTypeFrame children '''
 		self.PlotTypeRadiobuttons = {}
 
 		for pType in PlotTypesList:
@@ -491,13 +574,16 @@ class MainPage(tk.Frame):
 			self.PlotTypeRadiobuttons[pType].pack(side = "top", fill = "x")
 		
 		def PlotOptionsTypeCommand(RBnameVar, RBdict):
+			''' The command functions of the RB in PlotOptionsTypeFrame '''
 			self.TypesFrames[RBnameVar.get()].tkraise()
 			self.ActivateRadioButton(RBnameVar, RBdict)
 		
 		self.PlotTypeRadiobuttons['Autocorrelation'].config(fg='green')
 		
 
+
 	def PlotOptionsAutocorr(self):
+		''' Defining the PlotOptionsAutocorrFrame children '''
 		l_text = "\nSpecify the number of the lags"
 		label1 = tk.Label(self.PlotOptionsAutocorrFrame, text=l_text, font=LARGE_FONT)
 		label1.pack(pady = 10, padx = 10)	
@@ -506,7 +592,10 @@ class MainPage(tk.Frame):
 		self.Edit_autoLag.pack()
 		self.Edit_autoLag.insert(0, "40")
 
+
+
 	def PlotOptionsCorr(self):
+		''' Defining the PlotOptionsCorrFrame children '''
 		self.CorrCategoryRadiobuttons = {}
 
 		for cType in CategoriesList:
@@ -525,26 +614,37 @@ class MainPage(tk.Frame):
 		self.Edit_tPeriod2_numb.pack(side = "top")
 		self.Edit_tPeriod2_numb.insert(0, "1")
 
+
+
 	def PlotOptionsBlanc(self):
+		''' Defining a BlancFrame (detailed explanation: line 460) '''
 		pass
 
+
+
 	def PlotGraph(self):
+		''' Defining the PlotGraphFrame children '''
+
+		# matplotlib in the Tkinter application (ideas.md [1])
 		canvas = FigureCanvasTkAgg(f, self.PlotGraphFrame)
 		canvas.draw()
 		canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady = 5)
-
 		toolbar = NavigationToolbar2Tk(canvas,self.PlotGraphFrame)
 		toolbar.update()
 		canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
 
+
 def main():
+	'''Main function'''
 	app=MeteorologyApp()
-	app.geometry("1280x720")
-	ani = animation.FuncAnimation(f, app.update_plot, interval=1000)
+	app.geometry("1280x720") # Size of the Tkinter window
+
+	# Object of matplotlib animation, used to update Plot every time something has changed
+	ani = animation.FuncAnimation(f, app.check_update, interval=500)
 	app.mainloop()
+
 
 
 if __name__ == '__main__':
 	main()
-	
