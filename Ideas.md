@@ -16,6 +16,12 @@ https://www.mathsisfun.com/data/correlation.html
 ## Autocorrelation:
 https://www.youtube.com/watch?v=ZjaBn93YPWo&ab_channel=BrandonRohrer
 
+## Tkinter pages tutorial
+https://youtube.com/playlist?list=PLQVvvaa0QuDclKx-QpC9wntnURXVJqLyk
+
+## Pandas, numpy, matplotlib course
+https://www.datacamp.com/tracks/data-analyst-with-python
+
 ## Data:
 	N 	- Number of the hour in the year
 	M 	- Month

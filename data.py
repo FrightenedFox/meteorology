@@ -1,6 +1,15 @@
 import pandas as pd, numpy as np
 import matplotlib.pyplot as plt
-from statsmodels.graphics.tsaplots import plot_acf # is not very important 
+
+statsmodels = False
+try:
+	from statsmodels.graphics.tsaplots import plot_acf # is not very important 
+except ModuleNotFoundError as exc:
+	print('\n\n{}\n\nPlease install the module mentioned above\n'.format(exc)+
+		'to be able to appreciate some beautiful plots.')
+else:
+	statsmodels = True
+
 
 class WeatherData():
 	# Defining columns' names
@@ -114,6 +123,8 @@ class WeatherData():
 		plt.plot([-2, max_lag+2], [0,0])
 		plt.xlim((-2,max_lag+2))
 		plt.scatter(x_ax, corr_list, s=20)
-		plot_acf(self.dFrame[x], lags = max_lag-1)
+		global statsmodels
+		if statsmodels:
+			plot_acf(self.dFrame[x], lags = max_lag-1)
 		plt.show()
 		plt.close()
