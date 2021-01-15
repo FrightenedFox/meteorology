@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from statsmodels.graphics.tsaplots import plot_acf # is not very important 
 
 class WeatherData():
-	# Defining column's names
+	# Defining columns' names
 	names = ['M', 'D', 'H', 
 		'DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY', 'N_0', 
 		'N_30', 'NE_30', 'E_30', 'SE_30', 'S_30', 'SW_30', 'W_30', 'NW_30',
@@ -13,7 +13,7 @@ class WeatherData():
 
 	def __init__(self, path, filetype = 'txt', year = 2013):
 		''' Initializing an object of the class Weather'''
-		# Reading file using one of built in methods in Pandas module depending on 
+		# Reading the file using one of built-in methods in Pandas module depending on 
 		# the given argument
 		if filetype=='txt':
 			self.dFrame = pd.read_table(path,
@@ -97,7 +97,7 @@ class WeatherData():
 		'''Plots correlation between 'x' and 'y' 
 		columns in the main DataFrame'''
 		s_x = self.dFrame[x].diff() 
-		s_y = self.dFrame[y].diff()	# Finding the difference between the neighbor values
+		s_y = self.dFrame[y].diff()	# Finding the difference between the neighbouring values
 		plt.scatter(s_x, s_y, s = 2)
 		plt.show()
 		plt.close()
