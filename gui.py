@@ -8,7 +8,7 @@ matplotlib.use("TkAgg")
 style.use("ggplot")
 
 import tkinter as tk
-from tkinter import ttk 	# for modern widgets as buttons in line 334
+from tkinter import ttk 	# for modern widgets such as buttons in line 334
 from tkinter.filedialog import askopenfilename as tkOpenFile   
 
 import pandas as pd
@@ -16,7 +16,7 @@ import numpy as np
 
 import data as dt 	# my own python script data.py
 
-# Initializing all names for the Radio Buttons on the panel of choosing data types and time periods 
+# Initializing all names for the Radio Buttons on the panel for choosing data types and time periods 
 CategoriesList = ['DBT', 'RH', 'HR', 'WS', 'WD', 'ITH', 'IDH', 'ISH', 'TSKY']
 TimePeriodsDict = {	'all' 	: 'All',
 					'day' 	: 'Day',
@@ -29,9 +29,9 @@ PlotTypesList = ['Autocorrelation','Correlation', 'Plot Data']
 light_green = '#96f97b'
 inactive_col = 'lightgrey'
 
-# Correspond for the updating of the graph and statistics
+# Corresponds for the updating of the graph and statistics
 UPDATE_FLAG = False		# It has to be false if the input file isn't preloaded
-NEW_FILE = False		# in the beginning of the program
+NEW_FILE = False		# at the beginning of the program
 
 
 # Predefined fonts for convenience
@@ -45,7 +45,7 @@ SMALL_FONT = ("Verdana", 8)
 disclaimer = 'ALPHA Weather tracking application.\nUse at your own risk.\nThere is no promise of warranty.'
 disclaimer+= '\n\nDo you agree and continue?'
 
-# Defining a figure 'f' and it's axis 'a' (matplotlib packages) 
+# Defining a figure 'f' and its axis 'a' (matplotlib packages) 
 f = Figure()
 a = f.add_subplot(1,1,1)
 
@@ -57,7 +57,7 @@ class MeteorologyApp(tk.Tk):
 		''' Initializing an object as a child of the Tkinter application class. '''
 		tk.Tk.__init__(self, *args, **kwargs)
 
-		# Initializing some Tkinter variables, which are used to dynamically change 
+		# Initializing some Tkinter variables, which are used to change dynamically
 		# the text in the Tkinter widgets
 		self._category = tk.StringVar()
 		self._category.set('DBT')
@@ -92,7 +92,7 @@ class MeteorologyApp(tk.Tk):
 		container.grid_rowconfigure(0, weight = 1)	# The best explanation of the row/column configure 
 		container.grid_columnconfigure(0, weight = 1)	# function can be found in ideas.md [2]
 
-		# Creating a top menu and 2 buttons there
+		# Creating the top menu and 2 buttons there
 		menubar = tk.Menu(container)
 		filemenu = tk.Menu(menubar, tearoff = 0)
 		filemenu.add_command(label='Load...', 
@@ -185,7 +185,7 @@ class MeteorologyApp(tk.Tk):
 
 		# Clearing the Pandas Series from empty spaces (dropna)
 		s_x = dFrame.diff().dropna() # and finding the difference between 
-		s_y = dFrame_second.diff().dropna()	# neighbour numbers
+		s_y = dFrame_second.diff().dropna()	# neighbouring numbers
 
 		# Creating a label of the axis
 		if self.tPeriod == 'all':
@@ -216,7 +216,7 @@ class MeteorologyApp(tk.Tk):
 
 	def update_plot(self, dFrame):
 		''' Updates data graph '''		
-		# Sorting the DataFrame not to create some holes in the plot
+		# Sorting the DataFrame so that not to create some holes in the plot
 		dFrame = dFrame.sort_index()
 		x_ax = np.linspace(1,len(dFrame),len(dFrame))
 		a.set_xlabel('{}s'.format(TimePeriodsDict[self.tPeriod]))
@@ -232,14 +232,14 @@ class MeteorologyApp(tk.Tk):
 		corr_list=[]
 		# Getting the number of lags chosen by the user
 		max_lag = self.frames[MainPage].Edit_autoLag.get()
-		# Excepting errors when user tries to enter a new value 
+		# Excepting errors when the user tries to enter a new value 
 		try:							# or misspells something
 			max_lag = int(max_lag)
 		except ValueError:
 			max_lag = 40
 		for lag in range(max_lag):
 			corr_list.append(dFrame.autocorr(lag))
-		# same as in the Matlab language (linearly spaced vector)
+		# the same as in the Matlab language (linearly spaced vector)
 		x_ax = np.linspace(1,max_lag,max_lag)
 		a.set_xlabel('Lag')
 		a.set_ylabel('{} autocorrelation'.format(self.dCategory))
@@ -261,14 +261,14 @@ class MeteorologyApp(tk.Tk):
 			self.tPeriod_numb = self.frames[MainPage].Edit_tPeriod_numb.get()
 
 			# Getting a second DataFrame with the special data type 
-			# but same time period
+			# but the same time period
 			self.dCategory2 = self._corr_category.get()
 			self.tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
 			
 			# Getting the information about which type of the plot is chosen
 			plot_type = self._plot_type.get()
 
-			# Checking if user changed something
+			# Checking if the user has changed something
 			if NEW_FILE or (self.dCategory, self.tPeriod, self.tPeriod_numb, self.dCategory2, 
 				self.tPeriod_numb2, plot_type) != (
 				self.old_dCategory, self.old_tPeriod, self.old_tPeriod_numb, 
@@ -276,14 +276,14 @@ class MeteorologyApp(tk.Tk):
 
 				plot_title = ''
 				a.clear()	# Clearing the previous axes
-				# Excepting errors when user tries to enter a new value 
+				# Excepting errors when the user tries to enter a new value 
 				try:							# or misspells something
 					self.tPeriod_numb = int(self.tPeriod_numb) 
 				except ValueError:
 					self.tPeriod_numb = 1	
 				plot_title += 'Graph of the '
 				# Getting a DataFrame with the special time period and data type 
-				# using proprietary python script data.py  
+				# using my own python script data.py  
 				dFrame = self.City.get_frame(
 					d_type = self.dCategory, 
 					t_interval = self.tPeriod,
@@ -346,7 +346,7 @@ class MainPage(tk.Frame):
 		''' Initializing an object as a child of the Tkinter Frame class. '''
 		tk.Frame.__init__(self, parent)
 		self.controller = controller
-		self.defaultcolor = self.cget('bg') # Takes current colour of the Frame (default colour)
+		self.defaultcolor = self.cget('bg') # Gets the current colour of the Frame (default colour)
 
 		self.grid_rowconfigure(0, weight = 1)
 		self.grid_rowconfigure(1, weight = 2)
@@ -356,7 +356,7 @@ class MainPage(tk.Frame):
 
 		# Don't know exactly why, but it is impossible to use 'page flipper'(line 105) inside another page.
 		# (the problem seems to appear in the 'Frame' initialization function)
-		# So that all children frames of the page must be initialized individually
+		# So all children frames of the page must be initialized individually
 		self.CategoryFrame = tk.LabelFrame(self, text = 'Data types')
 		self.CategoryFrame.grid(row = 0, column = 0, sticky = 'nsew', padx=5, pady = 5, rowspan=2)
 		self.Category()
@@ -419,7 +419,7 @@ class MainPage(tk.Frame):
 		Label.pack()
 
 		# Adding RadioButton objects to the 'CategoryRadiobuttons' dictionary,
-		# for them being able to be recoloured
+		# for them to be able to be recoloured
 		for cType in CategoriesList:
 			self.CategoryRadiobuttons[cType] = tk.Radiobutton(self.CategoryFrame, 
 				text=cType, font = NORMAL_FONT,	variable=self.controller._category, value=cType,
@@ -448,7 +448,7 @@ class MainPage(tk.Frame):
 		label = tk.Label(self.TimePeriodFrame, text="Choose the time period\nyou are interested in:", font=LARGE_FONT)
 		label.pack(pady = 10, padx = 10)	
 
-		# Same as with the Category RadioButtons (later RB), but this time the names are stored in the dictionary,
+		# The same as with the Category RadioButtons (later RB), but this time the names are stored in the dictionary,
 		# because the RB text has to be different from the 'data.py' notations
 		for pType, pLabel in TimePeriodsDict.items():
 			self.TimePeriodsRadiobuttons[pType] = tk.Radiobutton(self.TimePeriodFrame, 
@@ -636,7 +636,7 @@ class MainPage(tk.Frame):
 
 
 def main():
-	'''Main function'''
+	'''The main function'''
 	app=MeteorologyApp()
 	app.geometry("1280x720") # Size of the Tkinter window
 
