@@ -1,4 +1,4 @@
-import matplotlib.animation as animation 	# matplotlib animations, needed for the line 644
+import matplotlib.animation as animation 	# matplotlib animations, needed for the line 653
 import matplotlib	# matplotlib inside Tkinter (look ideas.md -> links -> [1])
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
@@ -8,11 +8,12 @@ matplotlib.use("TkAgg")
 style.use("ggplot")
 
 import tkinter as tk
-from tkinter import ttk 	# for modern widgets such as buttons in line 334
+from tkinter import ttk 	# for modern widgets such as buttons in line 343
 from tkinter.filedialog import askopenfilename as tkOpenFile   
 
 import pandas as pd
 import numpy as np
+import sys
 
 import data as dt 	# my own python script data.py
 
@@ -83,7 +84,11 @@ class MeteorologyApp(tk.Tk):
 		self.Var.set('Init-value')
 
 		# Setting the icon and the title of the application window
-		tk.Tk.iconbitmap(self, default='icon.ico')
+		if ( sys.platform.startswith('win')): 
+		    tk.Tk.iconbitmap(self, default='Images/icon.ico')	# Works only for windows
+		else:
+		    logo = tk.PhotoImage(file='Images/icon.gif')	# Works only for Linux
+		    self.call('wm', 'iconphoto', self._w, logo)
 		tk.Tk.wm_title(self, " Meteorology")
 
 		# Initializing the main frame of the application (maybe it is possible to live 
@@ -116,6 +121,8 @@ class MeteorologyApp(tk.Tk):
 		self.old_dCategory2 = self._corr_category.get()
 		self.old_tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
 		self.old_plot_type = self._plot_type.get()
+		self.old_max_lag = self.frames[MainPage].Edit_autoLag.get()
+
 
 		self.show_frame(WarningPage)  # Starting page
 
@@ -123,7 +130,7 @@ class MeteorologyApp(tk.Tk):
 
 	def InitializeFile(self):
 		''' Function which is called when the user wants to open a file '''
-		self.path = tkOpenFile(initialdir = '.\\Data\\', title = 'Choose your database', 
+		self.path = tkOpenFile(initialdir = './Data/', title = 'Choose your database', 
 			filetypes=(('Txt files', '*.txt'),('CSV files', '*.csv')))		# available types of files
 
 		# Reading an input file if it was chosen
@@ -230,24 +237,22 @@ class MeteorologyApp(tk.Tk):
 
 		a.clear()	# Clearing the previous axes
 		corr_list=[]
-		# Getting the number of lags chosen by the user
-		max_lag = self.frames[MainPage].Edit_autoLag.get()
 		# Excepting errors when the user tries to enter a new value 
 		try:							# or misspells something
-			max_lag = int(max_lag)
+			self.max_lag = int(self.max_lag)
 		except ValueError:
-			max_lag = 40
-		for lag in range(max_lag):
+			self.max_lag = 40
+		for lag in range(self.max_lag):
 			corr_list.append(dFrame.autocorr(lag))
 		# the same as in the Matlab language (linearly spaced vector)
-		x_ax = np.linspace(1,max_lag,max_lag)
+		x_ax = np.linspace(1,self.max_lag,self.max_lag)
 		a.set_xlabel('Lag')
 		a.set_ylabel('{} autocorrelation'.format(self.dCategory))
 		# Plotting the line on the 0 to improve graph readability
-		a.eventplot([0], orientation='vertical',linewidths=2.0, lineoffsets=0, linelengths=2*(max_lag+10))
+		a.eventplot([0], orientation='vertical',linewidths=2.0, lineoffsets=0, linelengths=2*(self.max_lag+10))
 		a.scatter(x_ax, corr_list, s=25)
-		a.vlines(x_ax, [0 for i in range(max_lag)], corr_list)
-		a.set_xlim((-2,max_lag+2))
+		a.vlines(x_ax, [0 for i in range(self.max_lag)], corr_list)
+		a.set_xlim((-2,self.max_lag+2))
 
 
 
@@ -264,15 +269,18 @@ class MeteorologyApp(tk.Tk):
 			# but the same time period
 			self.dCategory2 = self._corr_category.get()
 			self.tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
+
+			# Getting the number of lags chosen by the user
+			self.max_lag = self.frames[MainPage].Edit_autoLag.get()
 			
 			# Getting the information about which type of the plot is chosen
 			plot_type = self._plot_type.get()
 
 			# Checking if the user has changed something
 			if NEW_FILE or (self.dCategory, self.tPeriod, self.tPeriod_numb, self.dCategory2, 
-				self.tPeriod_numb2, plot_type) != (
+				self.tPeriod_numb2, plot_type, self.max_lag) != (
 				self.old_dCategory, self.old_tPeriod, self.old_tPeriod_numb, 
-				self.old_dCategory2, self.old_tPeriod_numb2, self.old_plot_type):
+				self.old_dCategory2, self.old_tPeriod_numb2, self.old_plot_type, self.old_max_lag):
 
 				plot_title = ''
 				a.clear()	# Clearing the previous axes
@@ -321,6 +329,7 @@ class MeteorologyApp(tk.Tk):
 				self.old_dCategory2 = self._corr_category.get()
 				self.old_tPeriod_numb2 = self.frames[MainPage].Edit_tPeriod2_numb.get()
 				self.old_plot_type = self._plot_type.get()
+				self.old_max_lag = self.frames[MainPage].Edit_autoLag.get()
 
 
 
@@ -354,7 +363,7 @@ class MainPage(tk.Frame):
 		self.grid_columnconfigure(0, weight = 1)
 		self.grid_columnconfigure(1, weight = 2)
 
-		# Don't know exactly why, but it is impossible to use 'page flipper'(line 105) inside another page.
+		# Don't know exactly why, but it is impossible to use 'page flipper'(line 111) inside another page.
 		# (the problem seems to appear in the 'Frame' initialization function)
 		# So all children frames of the page must be initialized individually
 		self.CategoryFrame = tk.LabelFrame(self, text = 'Data types')
@@ -617,7 +626,7 @@ class MainPage(tk.Frame):
 
 
 	def PlotOptionsBlanc(self):
-		''' Defining a BlancFrame (detailed explanation: line 460) '''
+		''' Defining a BlancFrame (detailed explanation: line 516) '''
 		pass
 
 
