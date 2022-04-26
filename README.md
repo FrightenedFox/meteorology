@@ -3,8 +3,7 @@
   
 ***
   
-This project is a part of the curriculum in "Wstęp do programowania"
-of the Polytechnic University of Rzeszów, Poland.  
+This project is a part of the curriculum in *"Introduction to programming"* of the Rzeszow University of Technology, Poland.  
   
 
 ## The purpose of the project  
